@@ -1,0 +1,110 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${FRONTEND_TARGET:-development}
+      cache_from:
+        - scandish-frontend:latest
+    image: scandish-frontend:latest
+    container_name: scandish-frontend
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    environment:
+      - VITE_BACKEND_URL=http://localhost:4100
+      - VITE_API_URL=http://localhost:4100
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: ${BACKEND_TARGET:-production}
+      cache_from:
+        - scandish-backend:latest
+    image: scandish-backend:latest
+    container_name: scandish-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      - AI_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.1:8b
+      - NODE_ENV=production
+    ports:
+      - "4100:4000"
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/ai-insights/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  postgres:
+    image: public.ecr.aws/docker/library/postgres:15-alpine
+    container_name: scandish-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=scandish
+      - POSTGRES_PASSWORD=scandish
+      - POSTGRES_DB=scandish
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scandish -d scandish"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+  ollama:
+    image: ollama/ollama:latest
+    container_name: scandish-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    image: scandish-ai-service:latest
+    container_name: scandish-ai-service
+    env_file:
+      - ./backend/.env
+    environment:
+      - PORT=5001
+      - AI_PROVIDER=ollama
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.1:8b
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama:
+  pgdata:
+
+
+

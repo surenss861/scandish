@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- PWA Configuration -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#F3C77E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Scandish" />
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
+  <!-- SEO -->
+  <title>Scandish — Instant QR Menus</title>
+  <meta name="description"
+    content="Scandish lets restaurants create and update QR code menus instantly. No PDFs. No reprints. Just scan & serve." />
+  <link rel="canonical" href="https://scandish.ca" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Scandish — Instant QR Menus" />
+  <meta property="og:description"
+    content="Create and update your restaurant's QR code menus instantly with Scandish. Loved by restaurants worldwide." />
+  <meta property="og:image" content="https://scandish.ca/og-image.png" />
+  <meta property="og:url" content="https://scandish.ca" />
+  <meta property="og:type" content="website" />
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Scandish — Instant QR Menus" />
+  <meta name="twitter:description" content="Scandish helps restaurants serve better with instant QR menus." />
+  <meta name="twitter:image" content="https://scandish.ca/og-image.png" />
+
+  <!-- Schema.org JSON-LD -->
+  <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Scandish",
+        "url": "https://scandish.ca",
+        "logo": "https://scandish.ca/logo.png",
+        "sameAs": [
+          "https://twitter.com/scandish",
+          "https://linkedin.com/company/scandish"
+        ],
+        "description": "Scandish — the easiest way for restaurants to create and update QR menus instantly.",
+        "founder": {
+          "@type": "Person",
+          "name": "Scandish Team"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "9.00",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+</head>
+
+<body class="bg-[#080705] text-[#FFFFFA]">
+  <div id="root"></div>
+  <script>
+    // Kill any existing Service Workers and clear caches BEFORE loading main.jsx
+    (function () {
+      if ('serviceWorker' in navigator && !sessionStorage.getItem('sw_killed')) {
+        sessionStorage.setItem('sw_killed', '1');
+        Promise.resolve()
+          .then(() => navigator.serviceWorker.getRegistrations())
+          .then((regs) => Promise.all((regs || []).map((r) => r.unregister())))
+          .then(() => (window.caches && caches.keys ? caches.keys() : []))
+          .then((keys) => Promise.all((keys || []).map((k) => caches.delete(k))))
+          .then(() => location.reload())
+          .catch(() => location.reload());
+      }
+    })();
+  </script>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>

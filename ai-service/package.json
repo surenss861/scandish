@@ -1,0 +1,22 @@
+{
+    "name": "scandish-ai-service",
+    "version": "0.1.0",
+    "description": "AI microservice for Scandish (menu descriptions, insights)",
+    "main": "src/server.js",
+    "scripts": {
+        "start": "node src/server.js",
+        "dev": "nodemon src/server.js"
+    },
+    "engines": {
+        "node": ">=18"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.19.2",
+        "openai": "^4.0.0",
+        "node-fetch": "^3.3.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.2"
+    }
+}

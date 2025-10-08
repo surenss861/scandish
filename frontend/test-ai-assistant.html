@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Menu AI Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #080705;
+            color: #fff;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #F3C77E;
+            margin-bottom: 1rem;
+        }
+
+        .status {
+            background: #1a1816;
+            border: 1px solid #40434E;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .test-section {
+            background: #1a1816;
+            border: 1px solid #40434E;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: #0a0908;
+            border: 1px solid #40434E;
+            border-radius: 8px;
+            color: #fff;
+            margin: 0.5rem 0;
+        }
+
+        button {
+            background: linear-gradient(to right, #F3C77E, #d6a856);
+            color: #000;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result {
+            background: #0a0908;
+            border: 1px solid #40434E;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .success {
+            color: #10B981;
+        }
+
+        .error {
+            color: #EF4444;
+        }
+
+        .loading {
+            color: #F3C77E;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Menu AI Assistant Test</h1>
+
+        <div class="status" id="status">
+            <h3>System Status</h3>
+            <div class="status-item">
+                <span id="backend-status">⏳ Checking backend...</span>
+            </div>
+            <div class="status-item">
+                <span id="endpoint-status">⏳ Checking AI endpoint...</span>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Code Generation</h3>
+
+            <label>Language:</label>
+            <select id="language">
+                <option value="css">CSS</option>
+                <option value="javascript">JavaScript</option>
+                <option value="scss">SCSS</option>
+            </select>
+
+            <label>Prompt:</label>
+            <textarea id="prompt" rows="3"
+                placeholder="Example: Create elegant menu item hover effects">Create elegant menu item hover effects</textarea>
+
+            <button onclick="testAI()" id="testBtn">Generate Code</button>
+
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:4000';
+
+        // Check backend status on load
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    document.getElementById('backend-status').innerHTML = '✅ Backend server running';
+                    checkEndpoint();
+                } else {
+                    throw new Error('Backend not responding');
+                }
+            } catch (error) {
+                document.getElementById('backend-status').innerHTML = '❌ Backend server not running (start with: npm run dev)';
+                document.getElementById('endpoint-status').innerHTML = '⏸️ Waiting for backend...';
+            }
+        }
+
+        async function checkEndpoint() {
+            try {
+                const response = await fetch(`${API_URL}/api/ai/vibe-coder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: 'test',
+                        language: 'css'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success || response.status === 200) {
+                    document.getElementById('endpoint-status').innerHTML = '✅ AI endpoint accessible';
+                } else {
+                    document.getElementById('endpoint-status').innerHTML = '⚠️ AI endpoint found but may have issues';
+                }
+            } catch (error) {
+                document.getElementById('endpoint-status').innerHTML = '❌ AI endpoint error: ' + error.message;
+            }
+        }
+
+        async function testAI() {
+            const prompt = document.getElementById('prompt').value;
+            const language = document.getElementById('language').value;
+            const resultDiv = document.getElementById('result');
+            const testBtn = document.getElementById('testBtn');
+
+            if (!prompt.trim()) {
+                resultDiv.innerHTML = '<span class="error">Please enter a prompt</span>';
+                return;
+            }
+
+            testBtn.disabled = true;
+            resultDiv.innerHTML = '<span class="loading">⏳ Generating code... (this may take 5-10 seconds)</span>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/ai/vibe-coder`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        language: language,
+                        context: 'Restaurant menu styling and branding'
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `<span class="success">✅ Success! Generated ${language.toUpperCase()} code:</span>\n\n${data.code}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Error: ${data.error || 'Unknown error'}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ Request failed: ${error.message}\n\nMake sure:\n1. Backend is running (npm run dev in backend folder)\n2. OpenAI API key is set in backend/.env\n3. No CORS issues</span>`;
+            } finally {
+                testBtn.disabled = false;
+            }
+        }
+
+        // Check status on page load
+        checkStatus();
+    </script>
+</body>
+
+</html>
