@@ -66,8 +66,7 @@ export default function Privacy() {
                         <div className="text-[#d6d6d6]">
                             <p>Questions about your privacy? We're here to help:</p>
                             <p className="mt-3">
-                                Email: <a href="mailto:privacy@scandish.ca" className="text-[#F3C77E] hover:underline">privacy@scandish.ca</a><br />
-                                Address: Scandish, Inc., 123 Tech Street, San Francisco, CA 94105
+                                Email: <a href="mailto:privacy@scandish.ca" className="text-[#F3C77E] hover:underline">privacy@scandish.ca</a>
                             </p>
                         </div>
                     </section>
