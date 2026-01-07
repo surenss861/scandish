@@ -8,6 +8,18 @@ const SCREEN_MESH_NAME = "Object_55";
 
 function applyTextureToMesh(mesh, tex) {
   // Configure texture properly
+  if (!tex || !tex.image) {
+    console.error("❌ Texture or texture image is null!");
+    return;
+  }
+  
+  console.log("🎨 Applying texture:", {
+    width: tex.image.width,
+    height: tex.image.height,
+    format: tex.format,
+    type: tex.type
+  });
+  
   tex.flipY = false; // Critical: match GLTF UV expectations
   tex.needsUpdate = true;
   tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -19,13 +31,17 @@ function applyTextureToMesh(mesh, tex) {
 
   // Option A: MeshBasicMaterial (unlit billboard) - simplest + most reliable
   // MeshBasicMaterial doesn't support emissive properties, so we use map only
-  const makeMat = () =>
-    new THREE.MeshBasicMaterial({
+  const makeMat = () => {
+    const mat = new THREE.MeshBasicMaterial({
       map: tex, // The demo texture as the main map
       color: new THREE.Color(0xffffff), // Pure white so texture shows at full brightness
       toneMapped: false, // Critical: don't tone map the screen
       transparent: false,
     });
+    mat.needsUpdate = true;
+    console.log("✅ Created MeshBasicMaterial with map:", !!mat.map);
+    return mat;
+  };
 
   if (Array.isArray(mesh.material)) {
     mesh.material = mesh.material.map(() => makeMat());
@@ -79,6 +95,11 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
   // Apply texture to the hard-targeted screen mesh
   useEffect(() => {
+    if (!screenTex || !screenTex.image) {
+      console.warn("⚠️ Screen texture not ready yet");
+      return;
+    }
+    
     let screenMesh = null;
     const glassMeshes = [];
 
@@ -105,8 +126,34 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       return;
     }
 
+    const box = new THREE.Box3().setFromObject(screenMesh);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    
     console.log("✅ Applying texture to screen mesh:", screenMesh.name);
+    console.log("📐 Screen mesh bounds:", size.x.toFixed(3), "x", size.y.toFixed(3), "x", size.z.toFixed(3));
+    console.log("🎨 Texture dimensions:", screenTex.image.width, "x", screenTex.image.height);
+    
     applyTextureToMesh(screenMesh, screenTex);
+    
+    // Force material update
+    if (screenMesh.material) {
+      if (Array.isArray(screenMesh.material)) {
+        screenMesh.material.forEach(mat => {
+          if (mat) {
+            mat.needsUpdate = true;
+            if (mat.map) mat.map.needsUpdate = true;
+          }
+        });
+      } else {
+        screenMesh.material.needsUpdate = true;
+        if (screenMesh.material.map) screenMesh.material.map.needsUpdate = true;
+      }
+    }
+    
+    // Force render update
+    screenMesh.visible = true;
+    console.log("✅ Material applied, mesh visible:", screenMesh.visible, "material:", screenMesh.material?.type);
 
     // Aggressively reduce glass dominance - hide front glass completely for bulletproof visibility
     glassMeshes.forEach((glass) => {

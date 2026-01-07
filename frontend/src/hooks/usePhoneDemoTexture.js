@@ -69,7 +69,7 @@ export function usePhoneDemoTexture() {
       }
       
       // Only update texture if state changed or progress changed significantly
-      const stateChanged = step !== lastStep;
+      const stateChanged = step !== lastStep?.step;
       const progressChanged = Math.floor(local * 10) !== Math.floor((lastStep?.local ?? 0) * 10);
       const shouldRedraw = stateChanged || progressChanged || step === "edit" || step === "sync";
       
@@ -79,19 +79,40 @@ export function usePhoneDemoTexture() {
       }
       
       lastStep = { step, local };
+      
+      // Debug: log first draw
+      if (t < 0.1) {
+        console.log("🎬 First frame drawing:", { step, W, H });
+      }
 
       // Background - ALWAYS fill entire screen with solid background (critical for visibility)
       const W = canvas.width;
       const H = canvas.height;
+      
+      // Clear and fill with bright background
       ctx.clearRect(0, 0, W, H);
-      // Solid bright background - fills entire canvas (brighter for hero visibility)
-      ctx.fillStyle = "#161C1A"; // Brighter background so it reads as "OLED on" from distance
+      ctx.fillStyle = "#1A211E"; // Even brighter background for visibility
       ctx.fillRect(0, 0, W, H);
+      
+      // Test: Draw a bright test pattern first to verify canvas is working
+      if (t < 0.5) {
+        // First 0.5s: show bright test pattern
+        ctx.fillStyle = "#1E7A4A";
+        ctx.fillRect(W * 0.1, H * 0.1, W * 0.8, H * 0.8);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "900 120px Inter, system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("DEMO", W / 2, H / 2);
+        ctx.textAlign = "left";
+        texture.needsUpdate = true;
+        raf = requestAnimationFrame(draw);
+        return;
+      }
       
       // Subtle vignette - center is brightest (perception hack)
       const gradient = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
       gradient.addColorStop(0, "rgba(0,0,0,0)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.15)");
+      gradient.addColorStop(1, "rgba(0,0,0,0.12)");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, W, H);
 
