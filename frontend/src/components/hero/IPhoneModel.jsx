@@ -15,9 +15,10 @@ function applyTextureToMesh(mesh, tex) {
       map: tex,
       toneMapped: false, // Critical: don't tone map the screen
       transparent: false,
-      // Add subtle emissive so it glows like OLED
-      emissive: new THREE.Color(0x1a1a1a),
-      emissiveIntensity: 0.3,
+      // Make it truly unlit and emissive - like a real OLED panel
+      emissive: new THREE.Color(0xffffff),
+      emissiveMap: tex,
+      emissiveIntensity: 1.2, // Strong emissive so it punches through glass
     });
 
   if (Array.isArray(mesh.material)) {
@@ -101,49 +102,40 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     console.log("✅ Applying texture to screen mesh:", screenMesh.name);
     applyTextureToMesh(screenMesh, screenTex);
 
-    // Aggressively reduce glass dominance - hide front glass if needed
-    glassMeshes.forEach((glass, idx) => {
+    // Aggressively reduce glass dominance - hide front glass completely for bulletproof visibility
+    glassMeshes.forEach((glass) => {
       if (glass.material) {
-        // Hide glass meshes that are likely in front of screen (Object_14, Object_53)
         const name = (glass.name ?? "").toLowerCase();
-        if (name.includes("glass") && (name.includes("14") || name.includes("53") || name.includes("front"))) {
-          // Option: hide completely for bulletproof visibility
-          // glass.visible = false;
-          // Or: make it very transparent
+        const matName = glass.material?.name?.toLowerCase?.() ?? "";
+        
+        // Hide front glass layers completely (Object_14, Object_53, Tint_back_glass, Mirror_filter)
+        if (name.includes("glass") && (
+          name.includes("14") || 
+          name.includes("53") || 
+          name.includes("front") ||
+          name.includes("tint") ||
+          matName.includes("tint") ||
+          matName.includes("mirror")
+        )) {
+          console.log("🚫 Hiding front glass layer:", glass.name);
+          glass.visible = false; // Hide completely for bulletproof visibility
+        } else {
+          // Other glass (bezel, back) - keep but make very transparent
           if (Array.isArray(glass.material)) {
             glass.material.forEach((mat) => {
               if (mat) {
-                mat.opacity = 0.5; // Very transparent
+                mat.opacity = 0.6;
                 mat.transparent = true;
                 if (mat.metalness !== undefined) mat.metalness = 0.1;
-                if (mat.roughness !== undefined) mat.roughness = 0.8;
+                if (mat.roughness !== undefined) mat.roughness = 0.9;
                 mat.needsUpdate = true;
               }
             });
           } else {
-            glass.material.opacity = 0.5;
+            glass.material.opacity = 0.6;
             glass.material.transparent = true;
             if (glass.material.metalness !== undefined) glass.material.metalness = 0.1;
-            if (glass.material.roughness !== undefined) glass.material.roughness = 0.8;
-            glass.material.needsUpdate = true;
-          }
-        } else {
-          // Other glass (bezel, back) - keep but reduce
-          if (Array.isArray(glass.material)) {
-            glass.material.forEach((mat) => {
-              if (mat) {
-                mat.opacity = 0.7;
-                mat.transparent = true;
-                if (mat.metalness !== undefined) mat.metalness = Math.min(0.3, mat.metalness);
-                if (mat.roughness !== undefined) mat.roughness = Math.max(0.6, mat.roughness);
-                mat.needsUpdate = true;
-              }
-            });
-          } else {
-            glass.material.opacity = 0.7;
-            glass.material.transparent = true;
-            if (glass.material.metalness !== undefined) glass.material.metalness = Math.min(0.3, glass.material.metalness);
-            if (glass.material.roughness !== undefined) glass.material.roughness = Math.max(0.6, glass.material.roughness);
+            if (glass.material.roughness !== undefined) glass.material.roughness = 0.9;
             glass.material.needsUpdate = true;
           }
         }

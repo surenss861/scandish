@@ -50,20 +50,21 @@ export function usePhoneDemoTexture() {
         tt -= s.dur;
       }
 
-      // Background - bright enough to read as "OLED on"
+      // Background - ALWAYS fill entire screen with solid background (critical for visibility)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      // Solid background fill - critical for visibility
-      ctx.fillStyle = "#121816"; // Lighter background so it reads as "on"
+      // Solid bright background - fills entire canvas
+      ctx.fillStyle = "#141A18"; // Bright enough to read as "OLED on"
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Top bar - much brighter, more contrast
-      ctx.fillStyle = "#1A211E";
+      // Top bar - much brighter, fills full width
+      ctx.fillStyle = "#1F2522";
+      ctx.fillRect(0, 0, canvas.width, 200); // Full width top bar
       roundRect(ctx, 70, 120, canvas.width - 140, 170, 36);
       ctx.fill();
 
       ctx.fillStyle = "#FFFFFF"; // Pure white for max contrast
-      ctx.font = "700 58px Inter, system-ui";
-      ctx.fillText("Demo Restaurant", 120, 230);
+      ctx.font = "800 60px Inter, system-ui";
+      ctx.fillText("Demo Restaurant", 120, 235);
 
       // Menu cards - 3 big items, MAXIMUM contrast, reads in 0.5s
       const items = [

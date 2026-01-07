@@ -79,39 +79,29 @@ export default function HeroBackground3D() {
           />
         </mesh>
         
-        {/* Small elegant callout label near phone edge */}
-        <group position={[0.25, 0.25, 0]}>
+        {/* Tiny pill callout above/left of phone (not overlapping) */}
+        <group position={[0.15, 0.45, 0]}>
           <mesh>
-            <planeGeometry args={[0.5, 0.12]} />
+            <planeGeometry args={[0.35, 0.08]} />
             <meshBasicMaterial 
               color="#101614" 
               transparent 
-              opacity={0.85}
+              opacity={0.9}
             />
           </mesh>
           <Text
             position={[0, 0, 0.01]}
-            fontSize={0.035}
+            fontSize={0.028}
             color="#F3F5F4"
             anchorX="center"
             anchorY="middle"
-            maxWidth={0.45}
+            maxWidth={0.3}
           >
             Edit → Live
           </Text>
-          <Text
-            position={[0, -0.04, 0.01]}
-            fontSize={0.025}
-            color="#A6B0AA"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={0.45}
-          >
-            QR unchanged
-          </Text>
-          {/* Subtle dot anchor */}
-          <mesh position={[0.28, 0, 0.01]}>
-            <circleGeometry args={[0.008, 16]} />
+          {/* Arrow pointing to phone */}
+          <mesh position={[0.2, -0.02, 0.01]} rotation={[0, 0, Math.PI / 4]}>
+            <boxGeometry args={[0.015, 0.08, 0.01]} />
             <meshBasicMaterial color="#1E7A4A" />
           </mesh>
         </group>
