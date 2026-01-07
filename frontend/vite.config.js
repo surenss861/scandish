@@ -21,10 +21,18 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          ui: ['framer-motion', 'lucide-react']
+          ui: ['framer-motion', 'lucide-react'],
+          three: ['three', '@react-three/fiber', '@react-three/drei']
         }
       }
+    },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
     }
+  },
+  optimizeDeps: {
+    include: ['three', '@react-three/fiber', '@react-three/drei']
   },
   define: {
     __SCANDISH_BUILD_TIME__: JSON.stringify(new Date().toISOString())

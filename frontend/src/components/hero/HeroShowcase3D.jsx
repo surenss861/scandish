@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment, ContactShadows } from "@react-three/drei";
+import { ContactShadows } from "@react-three/drei";
 import IPhoneModel from "./IPhoneModel.jsx";
 
 function useReducedMotion() {
@@ -50,7 +50,6 @@ export default function HeroShowcase3D() {
 
         <Suspense fallback={null}>
           <IPhoneModel />
-          <Environment preset="city" />
         </Suspense>
 
         <ContactShadows
