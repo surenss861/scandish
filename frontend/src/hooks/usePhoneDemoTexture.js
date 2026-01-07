@@ -33,6 +33,75 @@ export function usePhoneDemoTexture() {
     const frameInterval = 1000 / targetFPS;
     let lastStep = null; // Track state changes
 
+    // Helper functions
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+
+    function roundRect(ctx, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.closePath();
+    }
+
+    function fillBg(ctx, W, H) {
+      // Premium dark gradient
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#0B1110");
+      g.addColorStop(0.5, "#0A1411");
+      g.addColorStop(1, "#07100E");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+
+      // Soft green bloom
+      const rg = ctx.createRadialGradient(W * 0.7, H * 0.25, H * 0.1, W * 0.7, H * 0.25, H * 0.8);
+      rg.addColorStop(0, "rgba(30,122,74,0.18)");
+      rg.addColorStop(1, "rgba(30,122,74,0)");
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, W, H);
+
+      // Subtle vignette
+      const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.95);
+      vg.addColorStop(0, "rgba(0,0,0,0)");
+      vg.addColorStop(1, "rgba(0,0,0,0.55)");
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    function glassCard(ctx, x, y, w, h, r, fill = "rgba(255,255,255,0.06)", stroke = "rgba(255,255,255,0.08)") {
+      ctx.save();
+      // Shadow
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetY = 12;
+      ctx.fillStyle = fill;
+      roundRect(ctx, x, y, w, h, r);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, w, h, r);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function pill(ctx, x, y, w, h, r, fill, text, textColor = "#fff", font = "800 40px Inter, system-ui") {
+      ctx.save();
+      ctx.fillStyle = fill;
+      roundRect(ctx, x, y, w, h, r);
+      ctx.fill();
+      ctx.fillStyle = textColor;
+      ctx.font = font;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+      ctx.restore();
+    }
+
     const draw = (now) => {
       const ctx = ctxRef.current;
       if (!ctx) return;
@@ -89,268 +158,167 @@ export function usePhoneDemoTexture() {
         console.log("🎬 First frame drawing:", { step, W, H });
       }
 
-      // Background - ALWAYS fill entire screen with solid background (critical for visibility)
-      // W and H are already defined at the top of draw()
-
-      // Clear and fill with bright background
+      // --- PREMIUM UI DRAWING ---
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#1A211E"; // Even brighter background for visibility
-      ctx.fillRect(0, 0, W, H);
+      fillBg(ctx, W, H);
 
-      // Test: Draw a bright test pattern first to verify canvas is working
-      if (t < 0.5) {
-        // First 0.5s: show bright test pattern
-        ctx.fillStyle = "#1E7A4A";
-        ctx.fillRect(W * 0.1, H * 0.1, W * 0.8, H * 0.8);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 120px Inter, system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText("DEMO", W / 2, H / 2);
-        ctx.textAlign = "left";
-        texture.needsUpdate = true;
-        raf = requestAnimationFrame(draw);
-        return;
-      }
+      // Safe frame (simulate phone UI margins)
+      const padX = Math.round(W * 0.075);
+      const padTop = Math.round(H * 0.09);
+      const padBottom = Math.round(H * 0.08);
 
-      // Subtle vignette - center is brightest (perception hack)
-      const gradient = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
-      gradient.addColorStop(0, "rgba(0,0,0,0)");
-      gradient.addColorStop(1, "rgba(0,0,0,0.12)");
-      ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, W, H);
-
-      // Top bar - ALWAYS ON bright element (status bar) - perception hack
-      ctx.fillStyle = "#252D2A"; // Brighter status bar
-      ctx.fillRect(0, 0, W, 220); // Full width top bar
-      roundRect(ctx, 80, 130, W - 160, 180, 40);
-      ctx.fill();
-
-      ctx.fillStyle = "#FFFFFF"; // Pure white for max contrast
-      ctx.font = "900 64px Inter, system-ui"; // Bolder, bigger
-      ctx.fillText("Demo Restaurant", 130, 245);
-
-      // Always-on "Live" indicator (subtle when not live)
-      if (step === "live") {
-        ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, W - 200, 140, 160, 70, 35);
-        ctx.fill();
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 42px Inter, system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText("LIVE", W - 120, 180);
-        ctx.textAlign = "left";
-      }
-
-      // Hero row - ONE big price row (not multiple small items) for instant clarity
-      // Safe area insets to prevent UV stretching issues
-      const safeAreaTop = 280;
-      const safeAreaBottom = 200;
-      const safeAreaLeft = 100;
-      const safeAreaRight = 100;
-
-      // Single hero item - BIG and obvious
-      const heroItem = {
-        name: "Margherita Pizza",
-        price: step === "live" ? "$14.99" : "$16.99",
-        isChanged: step === "live"
-      };
-
-      const cardY = safeAreaTop;
-      const cardH = 280; // Bigger single row
-      const cardW = W - safeAreaLeft - safeAreaRight;
-
-      // Card background - much brighter for hero visibility
-      ctx.fillStyle = "#28302D";
-      ctx.strokeStyle = heroItem.isChanged
-        ? "rgba(30,122,74,1.0)" // Very strong highlight
-        : "rgba(30,122,74,0.4)";
-      ctx.lineWidth = heroItem.isChanged ? 6 : 4;
-      roundRect(ctx, safeAreaLeft, cardY, cardW, cardH, 60);
-      ctx.fill();
-      ctx.stroke();
-
-      // Flash highlight for changed price
-      if (heroItem.isChanged) {
-        ctx.fillStyle = "rgba(30,122,74,0.2)";
-        roundRect(ctx, safeAreaLeft, cardY, cardW, cardH, 60);
-        ctx.fill();
-      }
-
-      // Text - pure white, MUCH bigger for hero visibility
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "900 72px Inter, system-ui"; // Much bigger
-      ctx.fillText(heroItem.name, safeAreaLeft + 50, cardY + cardH / 2 - 20);
-
-      // Price - bright green, HUGE, flash on change
-      ctx.fillStyle = heroItem.isChanged ? "#2AAE67" : "#1E7A4A";
-      ctx.font = "900 80px Inter, system-ui"; // Huge
-      ctx.textAlign = "right";
-      ctx.fillText(heroItem.price, W - safeAreaRight - 50, cardY + cardH / 2 - 20);
-      ctx.textAlign = "left";
-
-      // Edit affordance - always visible pencil icon or slider hint
-      if (step === "menu") {
-        ctx.fillStyle = "rgba(30,122,74,0.6)";
-        ctx.font = "700 48px Inter, system-ui";
-        ctx.fillText("✏️ Edit", safeAreaLeft + 50, cardY + cardH + 60);
-      }
-
-      // Primary button - ALWAYS ON bright element (perception hack)
-      const btnY = safeAreaTop + cardH + 100;
-      ctx.fillStyle = "#1E7A4A";
-      roundRect(ctx, safeAreaLeft, btnY, cardW, 200, 65); // Bigger button
-      ctx.fill();
-
-      ctx.fillStyle = "#FFFFFF"; // Pure white for max contrast
-      ctx.font = "900 60px Inter, system-ui"; // Bigger, bolder
-      ctx.textAlign = "center";
-      ctx.fillText(step === "menu" ? "Edit price" : step === "live" ? "Updated ✓" : "Publishing...", W / 2, btnY + 120);
-      ctx.textAlign = "left";
-
-      // Edit step - BIG slider (obvious action)
-      if (step === "edit") {
-        const editY = btnY + 250;
-        ctx.fillStyle = "rgba(255,255,255,0.12)";
-        roundRect(ctx, safeAreaLeft, editY, cardW, 300, 60);
-        ctx.fill();
-
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 56px Inter, system-ui"; // Bigger
-        ctx.fillText("Update price", safeAreaLeft + 50, editY + 100);
-
-        // BIG slider track
-        const sliderY = editY + 180;
-        ctx.fillStyle = "rgba(255,255,255,0.25)";
-        roundRect(ctx, safeAreaLeft + 50, sliderY, cardW - 100, 32, 32); // Bigger track
-        ctx.fill();
-
-        // Slider value anim
-        const p = 0.2 + 0.6 * local;
-        ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, safeAreaLeft + 50, sliderY, (cardW - 100) * p, 32, 32);
-        ctx.fill();
-
-        // Big knob
-        ctx.beginPath();
-        ctx.arc(safeAreaLeft + 50 + (cardW - 100) * p, sliderY + 16, 28, 0, Math.PI * 2);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.fill();
-      }
-
-      // Syncing step - GIANT progress bar (obvious action)
-      if (step === "sync") {
-        const syncY = btnY + 250;
-        ctx.fillStyle = "rgba(255,255,255,0.12)";
-        roundRect(ctx, safeAreaLeft, syncY, cardW, 320, 60);
-        ctx.fill();
-
-        // Big "Updating..." text
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 64px Inter, system-ui"; // Even bigger
-        ctx.textAlign = "center";
-        ctx.fillText("Updating…", W / 2, syncY + 120);
-        ctx.textAlign = "left";
-
-        // GIANT progress bar track
-        const progressY = syncY + 200;
-        ctx.fillStyle = "rgba(255,255,255,0.3)";
-        roundRect(ctx, safeAreaLeft + 50, progressY, cardW - 100, 40, 40); // Much bigger
-        ctx.fill();
-
-        // Progress bar fill - bright green, animated
-        ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, safeAreaLeft + 50, progressY, (cardW - 100) * local, 40, 40);
-        ctx.fill();
-
-        // Percentage text - BIG
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 52px Inter, system-ui"; // Bigger
-        ctx.textAlign = "center";
-        ctx.fillText(`${Math.round(local * 100)}%`, W / 2, progressY + 50);
-        ctx.textAlign = "left";
-      }
-
-      // Live step toast + "Live" badge
-      if (step === "live") {
-        // Toast
-        ctx.fillStyle = "rgba(30,122,74,0.25)";
-        roundRect(ctx, 120, 1400, W - 240, 190, 54);
-        ctx.fill();
-
-        ctx.fillStyle = "#F3F5F4";
-        ctx.font = "800 46px Inter, system-ui";
-        ctx.fillText("Live in seconds ✓", 180, 1510);
-
-        // "Live" badge - EXTREMELY OBVIOUS, bigger, glowing with flash
-        const badgeX = W - safeAreaRight - 240;
-        const badgeY = 120;
-        const badgeW = 220;
-        const badgeH = 120;
-
-        // Multiple glow layers for strong visibility
-        ctx.shadowColor = "rgba(30,122,74,0.95)";
-        ctx.shadowBlur = 50;
-        ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 60);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // Badge itself - bright green
-        ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 60);
-        ctx.fill();
-
-        // Flash pulse effect (subtle)
-        const pulse = Math.sin(local * Math.PI * 2) * 0.1 + 0.9;
-        ctx.fillStyle = `rgba(255,255,255,${pulse * 0.35})`;
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 60);
-        ctx.fill();
-
-        // Text - pure white, bigger
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 58px Inter, system-ui"; // Bigger
-        ctx.textAlign = "center";
-        ctx.fillText("LIVE", badgeX + badgeW / 2, badgeY + 75);
-        ctx.textAlign = "left";
-      } else {
-        // "Preview" badge when not live
-        ctx.fillStyle = "rgba(166,176,170,0.3)";
-        roundRect(ctx, W - 220, 140, 150, 80, 40);
-        ctx.fill();
-
-        ctx.fillStyle = "rgba(166,176,170,0.8)";
-        ctx.font = "600 38px Inter, system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText("Preview", W - 145, 185);
-        ctx.textAlign = "left";
-      }
-
-      // "QR unchanged" badge
-      ctx.fillStyle = "rgba(255,255,255,0.08)";
-      roundRect(ctx, W - 360, H - 190, 260, 90, 45);
-      ctx.fill();
+      // Header row
       ctx.fillStyle = "rgba(255,255,255,0.9)";
-      ctx.font = "700 34px Inter, system-ui";
-      ctx.textAlign = "right";
-      ctx.fillText("QR unchanged", W - 330, H - 130);
+      ctx.font = "900 70px Inter, system-ui";
       ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText("Demo Restaurant", padX, padTop + 40);
 
-      // Screen edge emissive illusion - always visible, stronger when live
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = "600 42px Inter, system-ui";
+      ctx.fillText("Menu Editor", padX, padTop + 105);
+
+      // Status pill right
+      if (step === "live") {
+        // glow
+        ctx.save();
+        ctx.shadowColor = "rgba(30,122,74,0.8)";
+        ctx.shadowBlur = 40;
+        pill(ctx, W - padX - 220, padTop + 15, 220, 80, 40, "#1E7A4A", "LIVE");
+        ctx.restore();
+      } else {
+        pill(ctx, W - padX - 240, padTop + 15, 240, 80, 40, "rgba(255,255,255,0.08)", "Preview", "rgba(255,255,255,0.75)", "700 36px Inter, system-ui");
+      }
+
+      // Hero dish card with "photo" strip
+      const cardX = padX;
+      const cardY = padTop + 160;
+      const cardW = W - padX * 2;
+      const cardH = Math.round(H * 0.28);
+      glassCard(ctx, cardX, cardY, cardW, cardH, 70);
+
+      // photo strip
       ctx.save();
-      const glowIntensity = step === "live" ? 0.35 : 0.1; // Stronger glow when live
-      ctx.strokeStyle = `rgba(30,122,74,${glowIntensity})`;
-      ctx.lineWidth = step === "live" ? 16 : 8;
-      roundRect(ctx, 25, 95, W - 50, H - 190, 50);
-      ctx.stroke();
-
-      // Inner glow (softer)
-      ctx.strokeStyle = `rgba(30,122,74,${glowIntensity * 0.5})`;
-      ctx.lineWidth = 6;
-      roundRect(ctx, 35, 105, W - 70, H - 210, 45);
-      ctx.stroke();
+      const photoH = Math.round(cardH * 0.46);
+      const pg = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + photoH);
+      pg.addColorStop(0, "rgba(30,122,74,0.28)");
+      pg.addColorStop(1, "rgba(255,255,255,0.06)");
+      ctx.fillStyle = pg;
+      roundRect(ctx, cardX + 18, cardY + 18, cardW - 36, photoH, 55);
+      ctx.fill();
       ctx.restore();
 
-      // CRITICAL: Mark texture as dirty EVERY frame for smooth animation
+      // dish title
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = "900 62px Inter, system-ui";
+      ctx.fillText("Margherita Pizza", cardX + 52, cardY + photoH + 85);
+
+      // subtitle
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = "600 40px Inter, system-ui";
+      ctx.fillText("Edit price → publish instantly", cardX + 52, cardY + photoH + 145);
+
+      // price
+      const price = step === "live" ? "$14.99" : "$16.99";
+      ctx.textAlign = "right";
+      ctx.fillStyle = step === "live" ? "#2AAE67" : "rgba(255,255,255,0.8)";
+      ctx.font = "900 74px Inter, system-ui";
+      ctx.fillText(price, cardX + cardW - 52, cardY + photoH + 105);
+      ctx.textAlign = "left";
+
+      // Primary CTA button
+      const btnY = cardY + cardH + 90;
+      glassCard(ctx, cardX, btnY, cardW, 190, 65, "rgba(30,122,74,0.18)", "rgba(30,122,74,0.35)");
+      ctx.fillStyle = "#EFFFF6";
+      ctx.font = "900 62px Inter, system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      let btnLabel = "Edit price";
+      if (step === "edit") btnLabel = "Editing…";
+      if (step === "sync") btnLabel = "Publishing…";
+      if (step === "live") btnLabel = "Updated ✓";
+      ctx.fillText(btnLabel, W / 2, btnY + 95);
+
+      // Edit / Sync overlays (looks like a real sheet)
+      if (step === "edit" || step === "sync") {
+        const sheetH = Math.round(H * 0.30);
+        const sheetY = H - padBottom - sheetH;
+        glassCard(ctx, padX, sheetY, W - padX * 2, sheetH, 70, "rgba(255,255,255,0.08)", "rgba(255,255,255,0.09)");
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.font = "900 56px Inter, system-ui";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(step === "edit" ? "Update price" : "Publishing update", padX + 60, sheetY + 95);
+
+        if (step === "edit") {
+          // slider
+          const trackX = padX + 60;
+          const trackY = sheetY + 150;
+          const trackW = W - padX * 2 - 120;
+          const trackH = 34;
+          ctx.fillStyle = "rgba(255,255,255,0.20)";
+          roundRect(ctx, trackX, trackY, trackW, trackH, 20);
+          ctx.fill();
+          const p = clamp(0.15 + local * 0.75, 0, 1);
+          ctx.fillStyle = "#1E7A4A";
+          roundRect(ctx, trackX, trackY, trackW * p, trackH, 20);
+          ctx.fill();
+          // knob
+          ctx.beginPath();
+          ctx.arc(trackX + trackW * p, trackY + trackH / 2, 30, 0, Math.PI * 2);
+          ctx.fillStyle = "#EFFFF6";
+          ctx.fill();
+          // price preview
+          ctx.fillStyle = "rgba(255,255,255,0.65)";
+          ctx.font = "700 44px Inter, system-ui";
+          ctx.fillText("New price", trackX, trackY + 110);
+          ctx.textAlign = "right";
+          ctx.fillStyle = "#2AAE67";
+          ctx.font = "900 54px Inter, system-ui";
+          ctx.fillText("$14.99", trackX + trackW, trackY + 110);
+          ctx.textAlign = "left";
+        }
+
+        if (step === "sync") {
+          // progress
+          const pX = padX + 60;
+          const pY = sheetY + 160;
+          const pW = W - padX * 2 - 120;
+          const pH = 40;
+          ctx.fillStyle = "rgba(255,255,255,0.22)";
+          roundRect(ctx, pX, pY, pW, pH, 24);
+          ctx.fill();
+          ctx.fillStyle = "#1E7A4A";
+          roundRect(ctx, pX, pY, pW * local, pH, 24);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
+          ctx.font = "800 44px Inter, system-ui";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${Math.round(local * 100)}%`, W / 2, pY + pH / 2);
+          ctx.textAlign = "left";
+        }
+      }
+
+      // Live toast
+      if (step === "live") {
+        const toastW = Math.round(W * 0.82);
+        const toastH = 165;
+        const toastX = (W - toastW) / 2;
+        const toastY = Math.round(H * 0.62);
+        ctx.save();
+        ctx.shadowColor = "rgba(30,122,74,0.35)";
+        ctx.shadowBlur = 40;
+        glassCard(ctx, toastX, toastY, toastW, toastH, 65, "rgba(30,122,74,0.16)", "rgba(30,122,74,0.26)");
+        ctx.restore();
+        ctx.fillStyle = "#EFFFF6";
+        ctx.font = "900 52px Inter, system-ui";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("Live in seconds ✓  QR unchanged", W / 2, toastY + toastH / 2);
+      }
+
+      // ✅ update texture
       texture.needsUpdate = true;
       raf = requestAnimationFrame(draw);
     };
@@ -360,15 +328,4 @@ export function usePhoneDemoTexture() {
   }, [canvas, texture]);
 
   return texture;
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  const rr = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + rr, y);
-  ctx.arcTo(x + w, y, x + w, y + h, rr);
-  ctx.arcTo(x + w, y + h, x, y + h, rr);
-  ctx.arcTo(x, y + h, x, y, rr);
-  ctx.arcTo(x, y, x + w, y, rr);
-  ctx.closePath();
 }

@@ -62,10 +62,10 @@ export default function HeroBackground3D() {
         
         <Float speed={1.05} rotationIntensity={0.18} floatIntensity={0.22}>
           <group
-            position={[0.55, 0.12, 0]}  // Moved left ~15%, raised to "update in seconds" line
-            rotation={[0.04, -0.22, 0.01]}  // Less yaw, more face-on (was -0.28)
+            position={[1.05, 0.05, 0]}  // Adjusted for bigger phone
+            rotation={[0.04, -0.22, 0.02]}  // Slightly more face-on
           >
-            <IPhoneModel heroScale={3.5} />  // Bigger - visually competes with headline
+            <IPhoneModel heroScale={4.6} />  // WAY bigger - hero product shot
           </group>
         </Float>
         

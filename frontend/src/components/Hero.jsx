@@ -2,8 +2,10 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import HeroBackground3D from "./hero/HeroBackground3D.jsx";
-import TextureDebug from "./hero/TextureDebug.jsx";
 import { useHeroPin } from "../hooks/useHeroPin.js";
+
+// Debug flag - set to true only when debugging texture
+const SHOW_TEXTURE_DEBUG = false;
 
 export default function Hero() {
   const pinRef = useHeroPin();
@@ -25,9 +27,6 @@ export default function Hero() {
         {/* Localized spotlight behind phone (right side) - stronger */}
         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[800px] bg-[radial-gradient(circle_at_center,rgba(30,122,74,0.15),transparent_70%)] pointer-events-none" />
       </div>
-
-      {/* Debug: Show texture preview */}
-      <TextureDebug />
 
       {/* CONTENT */}
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-24">

@@ -188,22 +188,23 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       console.warn("⚠️ Screen mesh has no bounding box");
       return;
     }
-
+    
     const size = new THREE.Vector3();
     bbox.getSize(size);
 
-    const inset = 0.98;
-    const planeWidth = size.x * inset;
-    const planeHeight = size.y * inset;
+    // ✅ Overscan a hair so it fills edge-to-edge (tweak between 1.00 and 1.03 if needed)
+    const overscan = 1.015;
+    const planeWidth = size.x * overscan;
+    const planeHeight = size.y * overscan;
 
     console.log("📐 Screen mesh local size:", size.x.toFixed(3), "x", size.y.toFixed(3));
-    console.log("📐 Plane size:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
+    console.log("📐 Plane size (overscan):", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
 
     screenPlaneRef.current.geometry.dispose();
     screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
 
-    // Plane sits at the screen mesh origin; anchor will move it
-    screenPlaneRef.current.position.set(0, 0, 0.01); // push forward more
+    // Push forward a bit more so it always sits on top of the screen surface
+    screenPlaneRef.current.position.set(0, 0, 0.02);
 
     // Apply texture to our plane - CRITICAL: flipY = true for PlaneGeometry (opposite of GLTF mesh)
     screenTex.flipY = true; // <-- DIFFERENT from GLTF screen mesh
@@ -220,7 +221,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       color: 0xffffff,
       toneMapped: false,
       side: THREE.DoubleSide,
-      depthTest: false,
+      depthTest: true,     // once working, turn realism back on
       depthWrite: false,
     });
 
