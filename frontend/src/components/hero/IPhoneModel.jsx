@@ -94,35 +94,51 @@ function setCoverGlassLook(mesh) {
 }
 
 function ensureUVs(mesh) {
-  const geom = mesh.geometry;
-  if (!geom) return;
+  const geo = mesh?.geometry;
+  if (!geo || !geo.attributes?.position) return;
 
-  // If UVs exist, we're good
-  if (geom.attributes.uv && geom.attributes.uv.count > 0) {
-    console.log("✅ UVs already exist on", mesh.name);
+  // Already has UVs (check count matches position count)
+  if (geo.attributes.uv && geo.attributes.uv.count === geo.attributes.position.count) {
+    console.log(`✅ UVs already exist on ${mesh.name}`);
     return;
   }
 
-  // Generate planar UVs from bounding box (good enough for phone screens)
-  console.log("⚠️ Generating UVs for", mesh.name, "(missing or empty)");
-  geom.computeBoundingBox();
-  const bb = geom.boundingBox;
-  const pos = geom.attributes.position;
+  console.warn(`⚠️ Generating UVs for ${mesh.name}`);
+  geo.computeBoundingBox();
 
-  const sizeX = bb.max.x - bb.min.x || 1;
-  const sizeY = bb.max.y - bb.min.y || 1;
+  const bbox = geo.boundingBox;
+  const size = new THREE.Vector3();
+  bbox.getSize(size);
 
+  const pos = geo.attributes.position;
   const uv = new Float32Array(pos.count * 2);
+
+  // Planar projection on the 2 biggest axes (more robust than assuming X/Y)
+  const dims = [
+    { axis: "x", v: size.x },
+    { axis: "y", v: size.y },
+    { axis: "z", v: size.z },
+  ].sort((a, b) => b.v - a.v);
+
+  const a0 = dims[0].axis;
+  const a1 = dims[1].axis;
+
   for (let i = 0; i < pos.count; i++) {
-    const x = (pos.getX(i) - bb.min.x) / sizeX;
-    const y = (pos.getY(i) - bb.min.y) / sizeY;
-    uv[i * 2 + 0] = x;
-    uv[i * 2 + 1] = 1 - y; // flip so it matches typical UI orientation
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+
+    const p = { x, y, z };
+    const u = (p[a0] - bbox.min[a0]) / (size[a0] || 1);
+    const v = (p[a1] - bbox.min[a1]) / (size[a1] || 1);
+
+    uv[i * 2 + 0] = u;
+    uv[i * 2 + 1] = v;
   }
 
-  geom.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
-  geom.attributes.uv.needsUpdate = true;
-  console.log("✅ Generated UVs for", mesh.name);
+  geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  geo.attributes.uv.needsUpdate = true;
+  console.log(`✅ Generated UVs for ${mesh.name}`);
 }
 
 function setScreenMaterial(mesh, demoTexture) {
@@ -202,31 +218,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       });
     }
 
-    // 3) Make nearby glass layers non-blocking (or hide them if debugging)
-    //    We only do this for meshes roughly the same "screen" size so we don't destroy the whole phone.
-    const screenArea = fallbackScreen ? bboxArea(fallbackScreen) : null;
-
-    meshes.forEach((m) => {
-      if (!isGlassLike(m)) return;
-
-      if (DEBUG_HIDE_GLASS) {
-        m.visible = false;
-        return;
-      }
-
-      if (screenArea) {
-        const a = bboxArea(m);
-        const ratio = a / (screenArea || 1);
-        if (ratio > 0.45 && ratio < 1.8) {
-          setCoverGlassLook(m);
-        }
-      } else {
-        // if no screenArea, still soften glass rather than blocking everything
-        setCoverGlassLook(m);
-      }
-    });
-
-    // 4) Choose the "visible screen surface" = first ray hit that is NOT glass-like
+    // 3) Choose the "visible screen surface" = first ray hit that is NOT glass-like
     const visibleSurface =
       intersects.map((h) => h.object).find((obj) => obj.isMesh && !isGlassLike(obj)) || fallbackScreen;
 
@@ -234,6 +226,40 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       console.error("❌ No visible screen surface could be determined (raycast + fallback failed).");
       return;
     }
+
+    // 4) Only soften/hack the glass that's actually in front of the screen (ray-hit glass)
+    // Glass that is *actually between camera and screen* (from ray hits)
+    const rayHitMeshes = intersects.map((h) => h.object);
+
+    // Everything before visibleSurface in the hit stack
+    const idx = rayHitMeshes.findIndex((m) => m === visibleSurface);
+    const blockersInFront = idx > 0 ? rayHitMeshes.slice(0, idx) : rayHitMeshes;
+
+    // Only convert those glass-like layers (don't touch the whole phone)
+    blockersInFront.forEach((m) => {
+      if (!m.isMesh) return;
+      if (!isGlassLike(m)) return;
+
+      if (DEBUG_HIDE_GLASS) {
+        m.visible = false;
+        return;
+      }
+
+      // Replace material completely (don't tweak PBR glass)
+      m.material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color("#ffffff"),
+        transparent: true,
+        opacity: 0.06,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        depthTest: true,
+        toneMapped: false,
+        side: FORCE_DOUBLE_SIDE ? THREE.DoubleSide : THREE.FrontSide,
+      });
+
+      m.renderOrder = 998; // always above screen
+      console.log(`🔧 Made ray-hit glass transparent: ${m.name}`);
+    });
 
     console.log(
       `✅ Visible screen surface selected: ${visibleSurface.name} | mat: ${visibleSurface.material?.name || visibleSurface.material?.type}`
