@@ -89,37 +89,39 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right: 3D Showcase */}
+          {/* Right: 3D showcase */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
+            className="relative hidden lg:block"
           >
-            {/* Stage container (no card border, but gives us a framing box) */}
-            <div className="relative h-[520px] w-full overflow-hidden">
-              {/* soft stage lighting */}
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.20),transparent_60%)]" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0B0F0E]/50" />
+            {/* Stage (phone lives inside this) */}
+            <div className="relative h-[520px] w-full overflow-visible">
+              {/* Spotlight + vignette */}
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0F0E] via-transparent to-[#0B0F0E]" />
 
-              {/* 3D Canvas */}
-              <HeroShowcase3D className="absolute inset-0" />
+              {/* The actual 3D canvas */}
+              <div className="absolute inset-0">
+                <HeroShowcase3D />
+              </div>
 
-              {/* Top-right CTA (doesn't block canvas) */}
-              <div className="absolute top-4 right-4 z-20 pointer-events-auto">
+              {/* Top-right CTA */}
+              <div className="absolute top-6 right-6 z-20">
                 <Link
                   to="/menu/demo"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#1B2420] bg-[#0B0F0E]/40 px-4 py-2 text-sm text-[#F3F5F4] hover:border-[#1E7A4A] transition"
+                  className="px-4 py-2 rounded-full border border-white/10 bg-black/30 backdrop-blur text-[#F3F5F4] text-sm hover:border-[#1E7A4A]/50"
                 >
-                  Open live demo <span aria-hidden>→</span>
+                  Open live demo →
                 </Link>
               </div>
 
-              {/* QR badge overlay - outside stage to not block phone */}
-              <div className="absolute -bottom-6 right-0 translate-x-6 z-20 pointer-events-auto">
-                <div className="bg-[#101614]/85 border border-[#1B2420] rounded-2xl p-3 shadow-xl">
+              {/* QR badge (NOT covering phone) */}
+              <div className="absolute bottom-6 right-6 z-20">
+                <div className="bg-[#101614]/80 border border-[#1B2420] rounded-2xl p-3 backdrop-blur">
                   <QrPreview url="https://scandish.ca/menu/demo" size={92} />
-                  <p className="text-[11px] text-center text-[#A6B0AA] mt-2 font-medium">
+                  <p className="text-[10px] text-center text-[#A6B0AA] mt-2 font-medium">
                     Scan to view
                   </p>
                 </div>

@@ -9,7 +9,7 @@ export default function HeroShowcase3D({ className = "" }) {
     <div className={`w-full h-full pointer-events-auto ${className}`}>
       <Canvas
         dpr={[1, 1.5]}
-        camera={{ position: [0.15, 0.02, 2.05], fov: 34 }}
+        camera={{ position: [0.2, 0.05, 2.35], fov: 34 }}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         onCreated={({ gl }) => {
           gl.outputColorSpace = THREE.SRGBColorSpace;

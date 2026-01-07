@@ -382,9 +382,9 @@ export default function IPhoneModel({
   return (
     <group
       ref={group}
-      position={[0.35, -0.15, 0]}
+      position={[0.15, -0.25, 0]}
       rotation={[0.05, -0.55, 0.02]}
-      scale={1.45}
+      scale={1.8}
       onPointerDown={onPointerDown}
       onPointerOver={(e) => {
         // hover only when hovering screen mesh
@@ -393,7 +393,7 @@ export default function IPhoneModel({
       }}
       onPointerOut={() => setHoveringScreen(false)}
     >
-      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
+      <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.25}>
         <primitive object={scene} />
       </Float>
     </group>
