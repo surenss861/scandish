@@ -88,7 +88,7 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right: iPhone 3D Demo (Desktop) */}
+          {/* Right: iPhone 3D Demo */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -106,31 +106,29 @@ export default function Hero() {
               </Link>
             </div>
 
-            {/* Desktop: 3D iPhone */}
-            <div className="relative hidden lg:block h-[460px] w-full">
-              {/* Click overlay */}
-              <Link
-                to="/menu/demo"
-                className="absolute inset-0 z-20 rounded-[2.5rem]"
-                aria-label="Open live demo menu"
-              />
+            {/* Right: 3D Phone Showcase (Desktop) */}
+            <Link
+              to="/menu/demo"
+              className="relative hidden lg:block h-[460px] w-full rounded-[2.5rem] border border-[#1B2420] bg-[#0B0F0E]/40 overflow-hidden shadow-2xl group"
+            >
+              {/* Spotlight */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
 
-              {/* Subtle spotlight behind phone */}
-              <div className="absolute inset-0 z-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
-
-              {/* 3D iPhone */}
-              <div className="absolute inset-0 z-10 pointer-events-none">
+              {/* 3D Canvas lives INSIDE this card */}
+              <div className="absolute inset-0">
                 <HeroShowcase3D />
               </div>
 
-              {/* Optional: subtle glass base / vignette */}
-              <div className="absolute inset-0 z-0 rounded-[2.5rem] bg-gradient-to-b from-[#101614]/40 to-transparent border border-[#1B2420]" />
+              {/* Subtle glass overlay to match site */}
+              <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/20 via-transparent to-[#0B0F0E]/45" />
 
-              {/* Hover label */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-[#101614]/80 border border-[#1B2420] text-sm text-[#A6B0AA] opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
-                Click to view live demo →
+              {/* Hover CTA */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="px-5 py-2 rounded-full bg-[#101614]/80 border border-[#1B2420] text-[#F3F5F4] font-semibold">
+                  Click to view live demo →
+                </div>
               </div>
-            </div>
+            </Link>
           </motion.div>
         </div>
       </div>

@@ -15,31 +15,31 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
   // Auto-fit model to target size
   useEffect(() => {
     if (!scene) return;
-    
+
     // Auto-fit model to a target height (mutate original scene)
     const box = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
     box.getCenter(center);
-    
-    console.log("📐 Model bounding box:", { 
+
+    console.log("📐 Model bounding box:", {
       size: { x: size.x.toFixed(3), y: size.y.toFixed(3), z: size.z.toFixed(3) },
       center: { x: center.x.toFixed(3), y: center.y.toFixed(3), z: center.z.toFixed(3) }
     });
-    
+
     // Center it
     scene.position.sub(center);
-    
+
     // Scale it (target height in "three units")
     const targetHeight = 1.6;
     const scaleFactor = targetHeight / size.y;
     scene.scale.setScalar(scaleFactor);
-    
+
     console.log("✅ Auto-scaled model:", { scaleFactor: scaleFactor.toFixed(3), targetHeight });
-    
+
     sceneRef.current = scene; // Store reference for screen texture
-    
+
     if (onLoaded) {
       onLoaded();
       console.log("✅ GLB model loaded and auto-fitted successfully:", url);
@@ -173,7 +173,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
 
   // Auto-fitted model - simple positioning
   if (!scene) return null;
-  
+
   return (
     <group ref={group} position={[0, -0.2, 0]}>
       <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.22}>
