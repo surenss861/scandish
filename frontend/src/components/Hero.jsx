@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
+import HeroBackground3D from "./hero/HeroBackground3D.jsx";
 import { useHeroPin } from "../hooks/useHeroPin.js";
 
 export default function Hero() {
@@ -10,18 +10,19 @@ export default function Hero() {
   return (
     <section
       ref={pinRef}
-      className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden min-h-screen"
+      className="relative overflow-hidden bg-[#0B0F0E] min-h-screen"
     >
-      {/* 3D iPhone Background Canvas */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <HeroShowcase3D />
+      {/* 3D BACKGROUND */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <HeroBackground3D />
+        
+        {/* Extra haze so text stays readable */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_35%,rgba(22,163,74,0.18),transparent_55%)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/60" />
       </div>
 
-      {/* Green/Black Tint Overlays */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-[#0B0F0E]/35 to-[#0B0F0E]/70 z-0" />
-      <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[#1E7A4A]/10 blur-[120px] z-0" />
-
-      <div className="relative max-w-7xl mx-auto z-10">
+      {/* CONTENT */}
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-24">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left: Content */}
           <motion.div
