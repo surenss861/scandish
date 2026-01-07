@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
@@ -12,11 +12,6 @@ export default function Hero() {
       ref={pinRef}
       className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden min-h-screen"
     >
-      {/* 3D iPhone Model - BEHIND everything, positioned on right side */}
-      <div data-phone-3d className="absolute inset-0 -z-10">
-        <HeroShowcase3D />
-      </div>
-
       {/* Green/Black Tint Overlays */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-[#0B0F0E]/35 to-[#0B0F0E]/70 z-0" />
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[#1E7A4A]/10 blur-[120px] z-0" />
@@ -93,20 +88,44 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right: 3D iPhone Model - REPLACES the demo menu card */}
+          {/* Right: iPhone 3D Demo (Desktop) */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative h-[600px] lg:h-[700px] flex items-center justify-center"
+            className="relative"
           >
-            {/* The 3D iPhone will render here via HeroShowcase3D positioned absolutely */}
-            {/* This div just reserves space and centers the 3D model */}
-            <div className="w-full h-full flex items-center justify-center">
-              {/* Placeholder text for mobile */}
-              <div className="lg:hidden text-center">
+            {/* Mobile placeholder */}
+            <div className="lg:hidden flex items-center justify-center h-[400px]">
+              <Link
+                to="/menu/demo"
+                className="text-center hover:opacity-80 transition-opacity"
+              >
                 <div className="text-6xl mb-4">📱</div>
-                <p className="text-[#A6B0AA]">3D model on desktop</p>
+                <p className="text-[#A6B0AA]">Tap to view live demo</p>
+              </Link>
+            </div>
+
+            {/* Desktop: 3D iPhone */}
+            <div className="relative hidden lg:block h-[520px] w-full">
+              {/* Click overlay */}
+              <Link
+                to="/menu/demo"
+                className="absolute inset-0 z-20 rounded-[2.5rem]"
+                aria-label="Open live demo menu"
+              />
+
+              {/* 3D iPhone */}
+              <div className="absolute inset-0 z-10 pointer-events-none">
+                <HeroShowcase3D />
+              </div>
+
+              {/* Optional: subtle glass base / vignette */}
+              <div className="absolute inset-0 z-0 rounded-[2.5rem] bg-gradient-to-b from-[#101614]/40 to-transparent border border-[#1B2420]" />
+
+              {/* Hover label */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full bg-[#101614]/80 border border-[#1B2420] text-sm text-[#A6B0AA] opacity-0 hover:opacity-100 transition-opacity pointer-events-none">
+                Click to view live demo →
               </div>
             </div>
           </motion.div>

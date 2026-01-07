@@ -153,10 +153,9 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
 
-  // Model is ~0.15 units tall, scale to ~3-4 units visible
-  // Position it in front of camera
+  // Device mock positioning - adjust scale and position for nice fit
   return (
-    <group ref={group} position={[0, 0, 0]} scale={25} rotation={[0, 0, 0]}>
+    <group ref={group} position={[0.9, -0.35, 0]} scale={1.35}>
       <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
         <primitive object={scene} />
       </Float>

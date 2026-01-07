@@ -10,7 +10,7 @@ export default function HeroShowcase3D() {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024); // Hide on tablets too
+      setIsMobile(window.innerWidth < 1024);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -23,54 +23,43 @@ export default function HeroShowcase3D() {
   }
 
   return (
-    <div 
-      className="absolute inset-0 -z-10 pointer-events-none"
-    >
-      {/* Position canvas on right side of hero */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/2 h-full flex items-center justify-center">
-        <Canvas
-          dpr={[1, 1.5]}
-          camera={{ position: [0, 0, 5], fov: 60 }}
-          gl={{ 
-            antialias: true, 
-            powerPreference: "high-performance", 
-            alpha: true,
-            preserveDrawingBuffer: true
-          }}
-          shadows={false}
-          onCreated={(state) => {
-            console.log("🎨 Canvas created successfully!", state);
-            console.log("📐 Canvas size:", state.size);
-            setCanvasReady(true);
-          }}
-          onError={(error) => {
-            console.error("❌ Canvas error:", error);
-          }}
-        >
-          <ambientLight intensity={1} />
-          <directionalLight position={[5, 5, 5]} intensity={2} />
-          <pointLight position={[-5, 5, 5]} intensity={1} />
-          <pointLight position={[0, -5, 5]} intensity={0.5} color="#1E7A4A" />
+    <div className="w-full h-full">
+      <Canvas
+        dpr={[1, 1.5]}
+        camera={{ position: [0, 0.1, 2.6], fov: 40 }}
+        gl={{ 
+          antialias: true, 
+          powerPreference: "high-performance", 
+          alpha: true
+        }}
+        shadows
+        onCreated={(state) => {
+          console.log("🎨 Canvas created successfully!", state);
+          setCanvasReady(true);
+        }}
+        onError={(error) => {
+          console.error("❌ Canvas error:", error);
+        }}
+      >
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[3, 4, 2]} intensity={1.2} castShadow />
+        <pointLight position={[-3, -3, 3]} intensity={0.5} color="#1E7A4A" />
 
-          <Suspense 
-            fallback={null}
-          >
-            <IPhoneModel onLoaded={() => setModelReady(true)} />
-          </Suspense>
+        <Suspense fallback={null}>
+          <IPhoneModel onLoaded={() => setModelReady(true)} />
+        </Suspense>
 
-          <ContactShadows
-            position={[0, -2, 0]}
-            opacity={0.4}
-            blur={2}
-            scale={15}
-          />
-        </Canvas>
-      </div>
-      
-      {/* Debug overlay - only in dev */}
+        <ContactShadows
+          position={[0, -1.15, 0]}
+          opacity={0.35}
+          blur={2.2}
+          scale={8}
+        />
+      </Canvas>
+
       {import.meta.env.DEV && canvasReady && (
-        <div className="absolute top-4 right-4 bg-[#1E7A4A] text-[#F3F5F4] px-3 py-1 rounded text-xs font-bold z-[9999] pointer-events-auto">
-          Canvas: {canvasReady ? "READY" : "LOADING"} {modelReady ? "| Model: READY" : "| Model: LOADING..."}
+        <div className="absolute top-4 left-4 bg-[#1E7A4A] text-[#F3F5F4] px-3 py-1 rounded text-xs font-bold z-[9999]">
+          Canvas: READY {modelReady ? "| Model: READY" : "| Model: LOADING..."}
         </div>
       )}
     </div>
