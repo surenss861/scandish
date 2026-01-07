@@ -16,7 +16,6 @@ export default function HeroShowcase3D() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Check if mobile
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -26,13 +25,14 @@ export default function HeroShowcase3D() {
     // Lazy load - only render after a short delay
     const timer = setTimeout(() => {
       setShouldRender(true);
+      console.log("🎨 3D Hero rendering:", { reduced, isMobile: window.innerWidth < 768, shouldRender: true });
     }, 300);
 
     return () => {
       clearTimeout(timer);
       window.removeEventListener("resize", checkMobile);
     };
-  }, []);
+  }, [reduced]);
 
   // Fallback skeleton
   if (reduced || isMobile || !shouldRender) {
@@ -48,7 +48,7 @@ export default function HeroShowcase3D() {
       <Canvas
         dpr={[1, 1.5]}
         camera={{ position: [0, 0.2, 3.2], fov: 40 }}
-        gl={{ antialias: true, powerPreference: "high-performance" }}
+        gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
         shadows
       >
         <ambientLight intensity={0.7} />
@@ -73,4 +73,3 @@ export default function HeroShowcase3D() {
     </div>
   );
 }
-

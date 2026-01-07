@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import QrPreview from "./QrPreview.jsx";
 import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
-import { useHeroParallax } from "../hooks/useHeroParallax.js";
+import { useHeroPin } from "../hooks/useHeroPin.js";
 
 export default function Hero() {
   const [draggedItem, setDraggedItem] = useState(null);
-  const parallaxRef = useHeroParallax();
+  const pinRef = useHeroPin();
 
   const demoItems = [
     { id: 1, name: "Margherita Pizza", price: "$16.99", category: "Pizza" },
@@ -17,11 +17,13 @@ export default function Hero() {
 
   return (
     <section
-      ref={parallaxRef}
-      className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden"
+      ref={pinRef}
+      className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden min-h-screen"
     >
       {/* 3D iPhone Model */}
-      <HeroShowcase3D />
+      <div data-phone-3d>
+        <HeroShowcase3D />
+      </div>
 
       {/* Green/Black Tint Overlays */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-[#0B0F0E]/35 to-[#0B0F0E]/70 z-0" />
@@ -31,7 +33,6 @@ export default function Hero() {
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left: Content */}
           <motion.div
-            data-parallax
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -57,6 +58,7 @@ export default function Hero() {
               ].map((prop, idx) => (
                 <div
                   key={idx}
+                  data-value-prop
                   className="flex items-center gap-3 text-[#A6B0AA]"
                 >
                   <div className="w-1.5 h-1.5 rounded-full bg-[#1E7A4A]" />
@@ -75,6 +77,7 @@ export default function Hero() {
             <div className="flex flex-wrap gap-4 mb-4">
               <Link
                 to="/login"
+                data-cta-pulse
                 className="px-6 py-3 bg-[#1E7A4A] text-[#F3F5F4] rounded-xl font-semibold hover:bg-[#2AAE67] transition-colors"
               >
                 Start Free
@@ -100,7 +103,6 @@ export default function Hero() {
 
           {/* Right: Clickable Demo Preview */}
           <motion.div
-            data-parallax
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
