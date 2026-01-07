@@ -84,15 +84,14 @@ export function usePhoneDemoTexture() {
 
       lastStep = { step, local };
 
-      // Debug: log first draw
+      // Debug: log first draw (W and H are already defined at top of function)
       if (t < 0.1) {
         console.log("🎬 First frame drawing:", { step, W, H });
       }
 
       // Background - ALWAYS fill entire screen with solid background (critical for visibility)
-      const W = canvas.width;
-      const H = canvas.height;
-
+      // W and H are already defined at the top of draw()
+      
       // Clear and fill with bright background
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = "#1A211E"; // Even brighter background for visibility
