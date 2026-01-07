@@ -59,7 +59,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const screenPlaneRef = useRef(null);
   const screenAnchorRef = useRef(null);
   const screenMeshRef = useRef(null);
-  
+
   // Matrix helpers for transform calculations
   const tmpM = useMemo(() => new THREE.Matrix4(), []);
   const invParentM = useMemo(() => new THREE.Matrix4(), []);
@@ -110,7 +110,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       return;
     }
 
-    let screenMesh = null;
+    let foundScreenMesh = null;
     const glassMeshes = [];
     const filterMeshes = []; // Mirror_filter, Tint_back_glass, etc.
 
@@ -118,7 +118,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       if (obj.isMesh) {
         // Find screen mesh (Object_55) - we'll use it for positioning, then hide it
         if (obj.name === SCREEN_MESH_NAME) {
-          screenMesh = obj;
+          foundScreenMesh = obj;
         }
         // Find glass layers
         const matName = obj.material?.name?.toLowerCase?.() ?? "";
@@ -135,12 +135,12 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     });
 
     // Store screen mesh ref for useFrame
-    screenMeshRef.current = screenMesh;
+    screenMeshRef.current = foundScreenMesh;
 
     // Hide ALL original screen-related meshes
-    if (screenMesh) {
-      console.log("🚫 Hiding original screen mesh:", screenMesh.name);
-      screenMesh.visible = false;
+    if (foundScreenMesh) {
+      console.log("🚫 Hiding original screen mesh:", foundScreenMesh.name);
+      foundScreenMesh.visible = false;
     }
 
     filterMeshes.forEach((filter) => {
@@ -188,7 +188,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       console.warn("⚠️ Screen mesh has no bounding box");
       return;
     }
-    
+
     const size = new THREE.Vector3();
     bbox.getSize(size);
 
@@ -261,7 +261,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     // Convert screenMesh world matrix into anchor-parent local space
     const parent = anchor.parent;
     if (!parent) return;
-    
+
     parent.updateWorldMatrix(true, false);
     invParentM.copy(parent.matrixWorld).invert();
     tmpM.multiplyMatrices(invParentM, screenMesh.matrixWorld);
