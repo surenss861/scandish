@@ -12,14 +12,14 @@ function applyTextureToMesh(mesh, tex) {
     console.error("❌ Texture or texture image is null!");
     return;
   }
-  
+
   console.log("🎨 Applying texture:", {
     width: tex.image.width,
     height: tex.image.height,
     format: tex.format,
     type: tex.type
   });
-  
+
   tex.flipY = false; // Critical: match GLTF UV expectations
   tex.needsUpdate = true;
   tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -56,7 +56,9 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const { scene } = useGLTF("/models/scandish.glb");
   const screenTex = usePhoneDemoTexture();
 
-  const root = useMemo(() => scene.clone(true), [scene]);
+  // CRITICAL: Don't clone - modify the actual scene instance that gets rendered
+  // Cloning was causing us to modify the wrong object
+  const root = useMemo(() => scene, [scene]);
 
   // Debug: Print mesh info to find the real screen mesh
   useEffect(() => {
@@ -102,6 +104,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     
     let screenMesh = null;
     const glassMeshes = [];
+    const filterMeshes = []; // Mirror_filter, Tint_back_glass, etc.
 
     root.traverse((obj) => {
       if (obj.isMesh) {
@@ -109,10 +112,16 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         if (obj.name === SCREEN_MESH_NAME) {
           screenMesh = obj;
         }
-        // Find glass layers (Object_14, Object_53 with Glass material)
+        // Find glass layers
         const matName = obj.material?.name?.toLowerCase?.() ?? "";
-        if (matName.includes("glass")) {
+        const objName = (obj.name ?? "").toLowerCase();
+        if (matName.includes("glass") || objName.includes("glass")) {
           glassMeshes.push(obj);
+        }
+        // Find filter/overlay meshes that might block the screen
+        if (objName.includes("filter") || objName.includes("mirror") || objName.includes("tint") || 
+            matName.includes("filter") || matName.includes("mirror") || matName.includes("tint")) {
+          filterMeshes.push(obj);
         }
       }
     });
@@ -130,70 +139,86 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     const size = new THREE.Vector3();
     box.getSize(size);
     
-    console.log("✅ Applying texture to screen mesh:", screenMesh.name);
+    console.log("✅ Found screen mesh:", screenMesh.name);
     console.log("📐 Screen mesh bounds:", size.x.toFixed(3), "x", size.y.toFixed(3), "x", size.z.toFixed(3));
     console.log("🎨 Texture dimensions:", screenTex.image.width, "x", screenTex.image.height);
+    console.log("🔍 Found filter/overlay meshes:", filterMeshes.map(m => m.name));
     
-    applyTextureToMesh(screenMesh, screenTex);
+    // STEP 1: Hide ALL filter/overlay meshes that might block the screen
+    filterMeshes.forEach((filter) => {
+      console.log("🚫 Hiding filter/overlay mesh:", filter.name);
+      filter.visible = false;
+    });
     
-    // Force material update
-    if (screenMesh.material) {
-      if (Array.isArray(screenMesh.material)) {
-        screenMesh.material.forEach(mat => {
-          if (mat) {
-            mat.needsUpdate = true;
-            if (mat.map) mat.map.needsUpdate = true;
-          }
-        });
-      } else {
-        screenMesh.material.needsUpdate = true;
-        if (screenMesh.material.map) screenMesh.material.map.needsUpdate = true;
-      }
-    }
-    
-    // Force render update
-    screenMesh.visible = true;
-    console.log("✅ Material applied, mesh visible:", screenMesh.visible, "material:", screenMesh.material?.type);
-
-    // Aggressively reduce glass dominance - hide front glass completely for bulletproof visibility
+    // STEP 2: Hide front glass layers completely
     glassMeshes.forEach((glass) => {
-      if (glass.material) {
-        const name = (glass.name ?? "").toLowerCase();
-        const matName = glass.material?.name?.toLowerCase?.() ?? "";
-
-        // Hide front glass layers completely (Object_14, Object_53, Tint_back_glass, Mirror_filter)
-        if (name.includes("glass") && (
-          name.includes("14") ||
-          name.includes("53") ||
-          name.includes("front") ||
-          name.includes("tint") ||
-          matName.includes("tint") ||
-          matName.includes("mirror")
-        )) {
-          console.log("🚫 Hiding front glass layer:", glass.name);
-          glass.visible = false; // Hide completely for bulletproof visibility
+      const name = (glass.name ?? "").toLowerCase();
+      const matName = glass.material?.name?.toLowerCase?.() ?? "";
+      if (name.includes("14") || name.includes("53") || name.includes("front") || 
+          name.includes("tint") || matName.includes("tint") || matName.includes("mirror")) {
+        console.log("🚫 Hiding front glass:", glass.name);
+        glass.visible = false;
+      } else {
+        // Other glass - make very transparent
+        if (Array.isArray(glass.material)) {
+          glass.material.forEach((mat) => {
+            if (mat) {
+              mat.opacity = 0.3;
+              mat.transparent = true;
+              mat.needsUpdate = true;
+            }
+          });
         } else {
-          // Other glass (bezel, back) - keep but make very transparent
-          if (Array.isArray(glass.material)) {
-            glass.material.forEach((mat) => {
-              if (mat) {
-                mat.opacity = 0.6;
-                mat.transparent = true;
-                if (mat.metalness !== undefined) mat.metalness = 0.1;
-                if (mat.roughness !== undefined) mat.roughness = 0.9;
-                mat.needsUpdate = true;
-              }
-            });
-          } else {
-            glass.material.opacity = 0.6;
-            glass.material.transparent = true;
-            if (glass.material.metalness !== undefined) glass.material.metalness = 0.1;
-            if (glass.material.roughness !== undefined) glass.material.roughness = 0.9;
-            glass.material.needsUpdate = true;
-          }
+          glass.material.opacity = 0.3;
+          glass.material.transparent = true;
+          glass.material.needsUpdate = true;
         }
       }
     });
+    
+    // STEP 3: Apply bright test material first (prove we can change the screen)
+    // Temporarily use a bright neon color to verify material replacement works
+    const testMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color(0x00ff00), // Bright green
+      toneMapped: false,
+    });
+    
+    if (Array.isArray(screenMesh.material)) {
+      // Multi-material: replace all slots
+      screenMesh.material = screenMesh.material.map(() => testMaterial);
+      console.log("✅ Applied test material to multi-material mesh (", screenMesh.material.length, "slots)");
+    } else {
+      screenMesh.material = testMaterial;
+      console.log("✅ Applied test material to single-material mesh");
+    }
+    
+    screenMesh.visible = true;
+    screenMesh.material.needsUpdate = true;
+    
+    // After 2 seconds, switch to actual texture
+    const timeout = setTimeout(() => {
+      console.log("🎨 Switching from test material to texture...");
+      applyTextureToMesh(screenMesh, screenTex);
+      
+      // Force material update
+      if (screenMesh.material) {
+        if (Array.isArray(screenMesh.material)) {
+          screenMesh.material.forEach(mat => {
+            if (mat) {
+              mat.needsUpdate = true;
+              if (mat.map) mat.map.needsUpdate = true;
+            }
+          });
+        } else {
+          screenMesh.material.needsUpdate = true;
+          if (screenMesh.material.map) screenMesh.material.map.needsUpdate = true;
+        }
+      }
+      
+      console.log("✅ Texture applied, material type:", screenMesh.material?.type || "array");
+    }, 2000);
+    
+    return () => clearTimeout(timeout);
 
     // Hide holder/stand meshes
     const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
