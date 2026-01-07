@@ -22,7 +22,7 @@ export default function HeroShowcase3D({ className = "" }) {
         <pointLight position={[-3, -2, 3]} intensity={0.6} color="#1E7A4A" />
 
         <Suspense fallback={null}>
-          <IPhoneModel />
+          <IPhoneModel onLoaded={() => console.log("✅ iPhone model loaded and ready")} />
         </Suspense>
 
         <ContactShadows

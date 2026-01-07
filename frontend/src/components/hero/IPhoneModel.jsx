@@ -334,16 +334,21 @@ export default function IPhoneModel({
 
   // Animate screen every frame
   useFrame((state) => {
-    if (!group.current) return;
+    if (!group.current || !scene) return;
 
-    // subtle float rotation
+    // subtle float rotation (add to base rotation)
     const t = state.clock.getElapsedTime();
-    group.current.rotation.y = Math.sin(t * 0.35) * 0.25;
-    group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
+    group.current.rotation.y = -0.55 + Math.sin(t * 0.35) * 0.18;
+    group.current.rotation.x = 0.05 + Math.sin(t * 0.22) * 0.03;
 
     // pause window after click
     const now = state.clock.getElapsedTime();
-    if (now < pauseUntilRef.current) return;
+    if (now < pauseUntilRef.current) {
+      // Still draw UI during pause, just don't advance
+      const step = manualStepRef.current ?? getStepByTime(now);
+      drawUI(step.key, step.t);
+      return;
+    }
 
     const step = getStepByTime(now);
     drawUI(step.key, step.t);
@@ -378,6 +383,11 @@ export default function IPhoneModel({
       manualStepRef.current = null;
     }, 2200);
   };
+
+  if (!scene) {
+    console.warn("⚠️ Scene not loaded yet");
+    return null;
+  }
 
   return (
     <group
