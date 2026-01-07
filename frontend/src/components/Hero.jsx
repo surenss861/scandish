@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
+import QrPreview from "./QrPreview.jsx";
 import { useHeroPin } from "../hooks/useHeroPin.js";
 
 export default function Hero() {
@@ -88,48 +89,43 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right: Floating iPhone Stage (Desktop) */}
+          {/* Right: Standalone 3D Phone Stage */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
+            className="relative hidden lg:block"
           >
-            {/* Mobile placeholder */}
-            <div className="lg:hidden flex items-center justify-center h-[400px]">
-              <Link
-                to="/menu/demo"
-                className="text-center hover:opacity-80 transition-opacity"
-              >
-                <div className="text-6xl mb-4">📱</div>
-                <p className="text-[#A6B0AA]">Tap to view live demo</p>
-              </Link>
-            </div>
-
-            {/* Desktop: Floating iPhone Stage */}
-            <div className="relative hidden lg:block h-[520px] w-full overflow-visible">
-              {/* Spotlight */}
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_40%,rgba(30,122,74,0.18),transparent_58%)]" />
-
-              {/* Soft vignette */}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0F0E]/55 via-transparent to-[#0B0F0E]/55" />
-
-              {/* Subtle glass haze (optional) */}
-              <div className="pointer-events-none absolute inset-0 backdrop-blur-[1px]" />
-
-              {/* 3D phone (interactive screen) */}
-              <div className="absolute inset-0 pointer-events-auto">
-                <HeroShowcase3D />
+            {/* Stage container (NOT a card) */}
+            <div className="relative h-[520px] w-full">
+              {/* Stage lighting layers */}
+              <div className="pointer-events-none absolute inset-0">
+                {/* spotlight */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_58%)]" />
+                {/* vignette */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#0B0F0E]/70 via-transparent to-[#0B0F0E]/70" />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-transparent to-[#0B0F0E]/65" />
               </div>
-
-              {/* Separate "open demo" CTA so screen stays interactive */}
+              {/* 3D Phone */}
+              <HeroShowcase3D className="absolute inset-0" />
+              {/* Separate CTA (doesn't interfere with the screen) */}
               <Link
                 to="/menu/demo"
-                className="absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#1B2420] bg-[#0B0F0E]/60 px-4 py-2 text-sm font-semibold text-[#F3F5F4] hover:border-[#1E7A4A] hover:bg-[#101614] transition"
+                className="absolute top-6 right-6 z-20 inline-flex items-center gap-2 rounded-full border border-[#1B2420] bg-[#0B0F0E]/40 px-4 py-2 text-sm font-semibold text-[#F3F5F4] backdrop-blur hover:border-[#1E7A4A] transition-colors"
               >
                 Open live demo <span className="opacity-70">→</span>
               </Link>
             </div>
+            {/* Optional QR below / corner */}
+            <Link
+              to="/menu/demo"
+              className="absolute -bottom-8 -right-8 bg-[#101614] border-2 border-[#1B2420] rounded-2xl p-4 shadow-xl hover:border-[#1E7A4A] transition-colors"
+            >
+              <QrPreview url="https://scandish.ca/menu/demo" size={120} />
+              <p className="text-xs text-center text-[#A6B0AA] mt-2 font-medium">
+                Scan to view
+              </p>
+            </Link>
           </motion.div>
         </div>
       </div>
