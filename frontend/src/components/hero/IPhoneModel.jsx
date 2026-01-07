@@ -22,45 +22,62 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       console.log("📐 Model bounding box:", { 
-        size: { x: size.x, y: size.y, z: size.z },
-        center: { x: center.x, y: center.y, z: center.z },
-        min: { x: box.min.x, y: box.min.y, z: box.min.z },
-        max: { x: box.max.x, y: box.max.y, z: box.max.z }
+        size: { x: size.x.toFixed(3), y: size.y.toFixed(3), z: size.z.toFixed(3) },
+        center: { x: center.x.toFixed(3), y: center.y.toFixed(3), z: center.z.toFixed(3) }
       });
     }
   }, [scene, url, onLoaded]);
 
-  // Create screen texture from canvas (menu preview)
+  // Create screen texture from canvas (menu preview - mock of the website)
   const canvas = document.createElement("canvas");
   canvas.width = 1170;
   canvas.height = 2532;
   const ctx = canvas.getContext("2d");
   
-  // Draw menu preview
+  // Draw menu preview (mock of the actual menu page)
   ctx.fillStyle = "#0B0F0E";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Header bar
   ctx.fillStyle = "#101614";
   ctx.fillRect(0, 0, canvas.width, 120);
+  
+  // Restaurant name
   ctx.fillStyle = "#F3F5F4";
   ctx.font = "bold 70px Inter, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("Demo Restaurant", canvas.width / 2, 75);
   
+  // Menu items
   let yPos = 250;
   const items = [
-    { name: "Margherita Pizza", price: "$16.99" },
-    { name: "Caesar Salad", price: "$12.99" },
-    { name: "Pasta Carbonara", price: "$18.99" },
+    { name: "Margherita Pizza", price: "$16.99", category: "Pizza" },
+    { name: "Caesar Salad", price: "$12.99", category: "Salads" },
+    { name: "Pasta Carbonara", price: "$18.99", category: "Pasta" },
   ];
   
+  // Category header
+  ctx.fillStyle = "#A6B0AA";
+  ctx.font = "600px 40px Inter, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("PIZZA", 80, 220);
+  
   items.forEach((item) => {
+    // Item card background
+    ctx.fillStyle = "#101614";
+    ctx.fillRect(60, yPos - 30, canvas.width - 120, 80);
+    
+    // Item name
     ctx.fillStyle = "#F3F5F4";
     ctx.font = "50px Inter, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(item.name, 80, yPos);
+    ctx.fillText(item.name, 80, yPos + 20);
+    
+    // Price
     ctx.fillStyle = "#1E7A4A";
     ctx.textAlign = "right";
-    ctx.fillText(item.price, canvas.width - 80, yPos);
+    ctx.fillText(item.price, canvas.width - 80, yPos + 20);
+    
     yPos += 120;
   });
   
@@ -139,19 +156,11 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
   // Model is ~0.15 units tall, scale to ~3-4 units visible
   // Position it in front of camera
   return (
-    <>
-      {/* DEBUG: Always visible test mesh */}
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[1, 2, 0.1]} />
-        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={1} />
-      </mesh>
-      
-      <group ref={group} position={[0, 0, 0]} scale={25} rotation={[0, 0, 0]}>
-        <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
-          <primitive object={scene} />
-        </Float>
-      </group>
-    </>
+    <group ref={group} position={[0, 0, 0]} scale={25} rotation={[0, 0, 0]}>
+      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
+        <primitive object={scene} />
+      </Float>
+    </group>
   );
 }
 
