@@ -154,10 +154,74 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
       foundScreenMesh.material.needsUpdate = true;
       foundScreenMesh.visible = true; // Keep it visible!
+      
+      // Set render order and depth settings for Object_55 (screen)
+      foundScreenMesh.renderOrder = 997; // Render before cover glass
+      foundScreenMesh.frustumCulled = false;
+      if (foundScreenMesh.material) {
+        if (Array.isArray(foundScreenMesh.material)) {
+          foundScreenMesh.material.forEach((mat) => {
+            if (mat) {
+              mat.depthWrite = true;
+              mat.depthTest = true;
+              mat.polygonOffset = true;
+              mat.polygonOffsetFactor = -1;
+              mat.polygonOffsetUnits = -1;
+              mat.needsUpdate = true;
+            }
+          });
+        } else {
+          foundScreenMesh.material.depthWrite = true;
+          foundScreenMesh.material.depthTest = true;
+          foundScreenMesh.material.polygonOffset = true;
+          foundScreenMesh.material.polygonOffsetFactor = -1;
+          foundScreenMesh.material.polygonOffsetUnits = -1;
+          foundScreenMesh.material.needsUpdate = true;
+        }
+      }
 
       console.log("✅ Applied texture to original screen mesh");
+      
+      // Make Object_54 (front cover) transparent and non-blocking
+      const DEBUG_HIDE_OBJECT54 = false; // Set to true to test if Object_54 is the blocker
+      root.traverse((obj) => {
+        if (!obj.isMesh) return;
+        
+        // Force Object_54 to behave like transparent cover glass (not opaque blocker)
+        if (obj.name === "Object_54") {
+          if (DEBUG_HIDE_OBJECT54) {
+            console.log("🧪 DEBUG: Hiding Object_54 to test if it's the blocker");
+            obj.visible = false;
+            return;
+          }
+          
+          console.log("🔧 Making Object_54 transparent (non-blocking cover glass)");
+          const m = obj.material;
+          if (m) {
+            if (Array.isArray(m)) {
+              m.forEach((mat) => {
+                if (mat) {
+                  mat.transparent = true;
+                  mat.opacity = 0.08; // Subtle sheen
+                  mat.depthWrite = false; // KEY: don't block the display
+                  mat.depthTest = true;
+                  mat.needsUpdate = true;
+                }
+              });
+            } else {
+              m.transparent = true;
+              m.opacity = 0.08;
+              m.depthWrite = false;
+              m.depthTest = true;
+              m.needsUpdate = true;
+            }
+          }
+          obj.renderOrder = 998; // In front of screen (997)
+        }
+      });
     } else {
-      console.error("❌ Screen mesh not found (geometry-based selection failed)");
+      // Only log error if all selection methods failed
+      console.error("❌ Screen mesh not found (all selection methods failed)");
     }
 
     // Hide tint/mirror filters that block the screen (but keep camera/notch)
