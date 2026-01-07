@@ -5,8 +5,16 @@ import * as THREE from "three";
 
 export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   const group = useRef(null);
-  const { scene } = useGLTF(url);
   const [screenTexture, setScreenTexture] = useState(null);
+  const [meshNames, setMeshNames] = useState([]);
+  
+  // Load the GLB model
+  const { scene } = useGLTF(url);
+
+  // Log when component mounts
+  useEffect(() => {
+    console.log("📱 iPhoneModel component mounted, GLB loaded");
+  }, []);
 
   // Create screen texture (menu preview)
   useEffect(() => {
@@ -58,6 +66,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
     setScreenTexture(texture);
+    console.log("✅ Screen texture created");
   }, []);
 
   // Debug: Log all mesh names (check console to identify screen mesh)
@@ -65,15 +74,32 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     const names = [];
     scene.traverse((obj) => {
       if (obj.isMesh) {
-        names.push(`${obj.name || "unnamed"} | mat: ${obj.material?.name || "no material"}`);
+        const name = obj.name || "unnamed";
+        const matName = obj.material?.name || "no material";
+        names.push({ name, matName, obj });
       }
     });
-    console.log("📱 iPhone GLB meshes:", names);
+    
+    console.log("📱 iPhone GLB meshes found:", names.length);
+    if (names.length > 0) {
+      console.table(names.map(n => ({ Mesh: n.name, Material: n.matName })));
+      // Also log as array for easy searching
+      console.log("📋 All mesh names:", names.map(n => n.name));
+    } else {
+      console.warn("⚠️ No meshes found in GLB model!");
+    }
+    setMeshNames(names);
   }, [scene]);
 
   // Apply screen texture to screen mesh
   useMemo(() => {
-    if (!screenTexture) return;
+    if (!screenTexture || meshNames.length === 0) {
+      if (!screenTexture) console.log("⏳ Waiting for screen texture...");
+      if (meshNames.length === 0) console.log("⏳ Waiting for mesh names...");
+      return;
+    }
+
+    let screenFound = false;
 
     scene.traverse((obj) => {
       if (!obj.isMesh) return;
@@ -89,6 +115,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
         name.includes("front") ||
         name.includes("lcd") ||
         name.includes("panel") ||
+        name.includes("screen_") ||
         matName.includes("screen") ||
         matName.includes("display") ||
         matName.includes("emissive") ||
@@ -96,6 +123,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
 
       if (isScreen) {
         console.log("✅ Found screen mesh:", name, "| material:", matName);
+        screenFound = true;
         
         // Create new material with screen texture
         obj.material = new THREE.MeshStandardMaterial({
@@ -116,7 +144,13 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
         }
       }
     });
-  }, [scene, screenTexture]);
+
+    if (!screenFound) {
+      console.warn("⚠️ No screen mesh detected. Check console table above for mesh names.");
+      console.log("💡 Tip: Look for meshes with names like 'screen', 'display', 'glass', 'front', 'lcd'");
+      console.log("💡 If you see the mesh names, share them and I can update the detection logic!");
+    }
+  }, [scene, screenTexture, meshNames]);
 
   useFrame((state) => {
     if (!group.current) return;
