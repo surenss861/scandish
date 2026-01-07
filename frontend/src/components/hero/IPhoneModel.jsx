@@ -24,6 +24,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     const glassMeshes = [];
     const notchMeshes = []; // Camera, notch, speaker - keep visible
     const filterMeshes = []; // Mirror_filter, Tint_back_glass, etc.
+    const allPotentialBlockers = []; // For diagnostics
 
     root.traverse((obj) => {
       if (obj.isMesh) {
@@ -49,8 +50,38 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           !notchMeshes.includes(obj)) {
           filterMeshes.push(obj);
         }
+        
+        // Diagnostic: collect all potential blockers (flat, large area, front-facing)
+        const blockerKeywords = ["14", "53", "front", "tint", "filter", "mirror", "display", "cover", "glass"];
+        const isPotentialBlocker = blockerKeywords.some(kw => 
+          objName.includes(kw) || matName.includes(kw)
+        );
+        if (isPotentialBlocker && obj !== foundScreenMesh) {
+          const box = new THREE.Box3().setFromObject(obj);
+          const size = new THREE.Vector3();
+          box.getSize(size);
+          const area = size.x * size.y;
+          const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
+          if (flat > 10 && area > 0.1) { // Flat and large = likely blocker
+            allPotentialBlockers.push({
+              name: obj.name,
+              material: matName,
+              area: area.toFixed(3),
+              flat: flat.toFixed(1),
+              visible: obj.visible
+            });
+          }
+        }
       }
     });
+    
+    // Log all potential blockers for diagnostics
+    if (allPotentialBlockers.length > 0) {
+      console.log("🔍 POTENTIAL BLOCKERS FOUND:");
+      allPotentialBlockers.forEach(b => {
+        console.log(`  - ${b.name} | material: ${b.material} | area: ${b.area} | flat: ${b.flat} | visible: ${b.visible}`);
+      });
+    }
 
     // ✅ Apply texture directly to original screen mesh (no replacement plane)
     if (foundScreenMesh) {
@@ -127,19 +158,19 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     // AGGRESSIVELY hide ALL front glass/tint/filter/display meshes that could block the screen
     // These are the blockers causing the grey reflective slab
     const blockerNames = [
-      "14", "53", "front", "tint", "filter", "mirror", "display", "screencover", 
+      "14", "53", "front", "tint", "filter", "mirror", "display", "screencover",
       "frontglass", "displayglass", "screen_glass", "cover"
     ];
-    
+
     glassMeshes.forEach((glass) => {
       const name = (glass.name ?? "").toLowerCase();
       const matName = glass.material?.name?.toLowerCase?.() ?? "";
-      
+
       // Check if this is a front-facing blocker (not bezel/back glass)
-      const isBlocker = blockerNames.some(blocker => 
+      const isBlocker = blockerNames.some(blocker =>
         name.includes(blocker) || matName.includes(blocker)
       );
-      
+
       if (isBlocker) {
         console.log("🚫 HIDING BLOCKER:", glass.name, "| material:", matName);
         glass.visible = false; // Fully hide - no transparency tricks
@@ -160,13 +191,13 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         }
       }
     });
-    
+
     // Also check ALL meshes for potential blockers (not just glass-labeled ones)
     root.traverse((obj) => {
       if (obj.isMesh && obj !== foundScreenMesh) {
         const name = (obj.name ?? "").toLowerCase();
         const matName = obj.material?.name?.toLowerCase?.() ?? "";
-        
+
         // Check if this looks like a front display blocker
         const looksLikeBlocker = (
           (name.includes("mirror") && name.includes("filter")) ||
@@ -175,7 +206,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           (matName.includes("tint") && matName.includes("back")) ||
           (matName.includes("mirror") && matName.includes("filter"))
         );
-        
+
         if (looksLikeBlocker) {
           console.log("🚫 HIDING ADDITIONAL BLOCKER:", obj.name, "| material:", matName);
           obj.visible = false;
