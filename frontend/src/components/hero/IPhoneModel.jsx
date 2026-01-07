@@ -231,7 +231,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     screenPlaneRef.current.position.set(0, 0, 0.012);
 
     // Also update bloom plane geometry (slightly larger) - set after plane is ready
-    if (screenBloomRef.current && screenPlaneRef.current.geometry) {
+    if (screenBloomRef.current) {
       screenBloomRef.current.geometry.dispose();
       screenBloomRef.current.geometry = new THREE.PlaneGeometry(planeW * 1.04, planeH * 1.04);
     }
