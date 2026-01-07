@@ -1,8 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
-import QrPreview from "./QrPreview.jsx";
 import { useHeroPin } from "../hooks/useHeroPin.js";
 
 export default function Hero() {
@@ -13,6 +11,18 @@ export default function Hero() {
       ref={pinRef}
       className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden min-h-screen"
     >
+      {/* iPhone Background */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/2 h-full opacity-20">
+          <img 
+            src="/models/scandish.glb" 
+            alt="iPhone" 
+            className="w-full h-full object-contain"
+            style={{ filter: "blur(40px)" }}
+          />
+        </div>
+      </div>
+
       {/* Green/Black Tint Overlays */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-[#0B0F0E]/35 to-[#0B0F0E]/70 z-0" />
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[#1E7A4A]/10 blur-[120px] z-0" />
@@ -89,44 +99,14 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right: 3D showcase */}
+          {/* Right: Empty - iPhone is now in background */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             className="relative hidden lg:block"
           >
-            {/* Stage (phone lives inside this) */}
-            <div className="relative h-[520px] w-full overflow-visible">
-              {/* Spotlight + vignette */}
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0F0E] via-transparent to-[#0B0F0E]" />
-
-              {/* The actual 3D canvas */}
-              <div className="absolute inset-0">
-                <HeroShowcase3D />
-              </div>
-
-              {/* Top-right CTA */}
-              <div className="absolute top-6 right-6 z-20">
-                <Link
-                  to="/menu/demo"
-                  className="px-4 py-2 rounded-full border border-white/10 bg-black/30 backdrop-blur text-[#F3F5F4] text-sm hover:border-[#1E7A4A]/50"
-                >
-                  Open live demo →
-                </Link>
-              </div>
-
-              {/* QR badge (NOT covering phone) */}
-              <div className="absolute bottom-6 right-6 z-20">
-                <div className="bg-[#101614]/80 border border-[#1B2420] rounded-2xl p-3 backdrop-blur">
-                  <QrPreview url="https://scandish.ca/menu/demo" size={92} />
-                  <p className="text-[10px] text-center text-[#A6B0AA] mt-2 font-medium">
-                    Scan to view
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Placeholder for future content or keep empty */}
           </motion.div>
         </div>
       </div>

@@ -286,7 +286,7 @@ export default function IPhoneModel({
 
     let found = null;
     const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
-    
+
     scene.traverse((obj) => {
       if (!obj?.isMesh) return;
       const matName = obj.material?.name?.toLowerCase?.() ?? "";
