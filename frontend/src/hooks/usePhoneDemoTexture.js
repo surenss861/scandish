@@ -50,117 +50,157 @@ export function usePhoneDemoTexture() {
         tt -= s.dur;
       }
 
-      // background
+      // Background - darker for OLED contrast
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#0B0F0E";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // top bar
-      ctx.fillStyle = "rgba(255,255,255,0.06)";
+      // Top bar - brighter
+      ctx.fillStyle = "#101614";
       roundRect(ctx, 70, 120, canvas.width - 140, 170, 36);
       ctx.fill();
 
-      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.fillStyle = "#F3F5F4"; // Bright white
       ctx.font = "700 56px Inter, system-ui";
       ctx.fillText("Demo Restaurant", 120, 230);
 
-      // menu cards
+      // Menu cards with high contrast
       const items = [
-        ["Margherita Pizza", "$16.99"],
+        ["Margherita Pizza", step === "live" ? "$14.99" : "$16.99"], // Price changes!
         ["Caesar Salad", "$12.99"],
-        ["Pasta Carbonara", step === "live" ? "$19.99" : "$18.99"],
+        ["Pasta Carbonara", step === "live" ? "$19.99" : "$18.99"], // Price changes!
       ];
       let y = 380;
       for (const [name, price] of items) {
-        ctx.fillStyle = "rgba(255,255,255,0.055)";
+        // Card background - brighter
+        ctx.fillStyle = "#101614";
         roundRect(ctx, 90, y, canvas.width - 180, 170, 44);
         ctx.fill();
 
-        ctx.fillStyle = "rgba(255,255,255,0.86)";
+        // Text - bright white
+        ctx.fillStyle = "#F3F5F4";
         ctx.font = "600 46px Inter, system-ui";
         ctx.fillText(name, 140, y + 110);
 
-        ctx.fillStyle = "#16a34a";
+        // Price - bright green
+        ctx.fillStyle = "#1E7A4A";
         ctx.font = "800 46px Inter, system-ui";
         ctx.fillText(price, canvas.width - 300, y + 110);
 
         y += 210;
       }
 
-      // primary button
-      ctx.fillStyle = "#16a34a";
+      // Primary button - bright green
+      ctx.fillStyle = "#1E7A4A";
       roundRect(ctx, 120, 1120, canvas.width - 240, 180, 60);
       ctx.fill();
 
-      ctx.fillStyle = "#07210f";
+      ctx.fillStyle = "#F3F5F4"; // Bright white text
       ctx.font = "800 54px Inter, system-ui";
       ctx.fillText(step === "menu" ? "Edit menu (demo)" : "Publish changes", 180, 1235);
 
-      // edit step slider
+      // Edit step slider
       if (step === "edit") {
-        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
         roundRect(ctx, 120, 1380, canvas.width - 240, 260, 54);
         ctx.fill();
 
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillStyle = "#F3F5F4";
         ctx.font = "700 48px Inter, system-ui";
         ctx.fillText("Update price", 180, 1470);
 
-        // slider track
-        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        // Slider track
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
         roundRect(ctx, 180, 1535, canvas.width - 360, 20, 20);
         ctx.fill();
 
-        // slider value anim
+        // Slider value anim
         const p = 0.2 + 0.6 * local;
-        ctx.fillStyle = "#16a34a";
+        ctx.fillStyle = "#1E7A4A";
         roundRect(ctx, 180, 1535, (canvas.width - 360) * p, 20, 20);
         ctx.fill();
 
-        // knob
+        // Knob
         ctx.beginPath();
         ctx.arc(180 + (canvas.width - 360) * p, 1545, 24, 0, Math.PI * 2);
-        ctx.fillStyle = "#eafff0";
+        ctx.fillStyle = "#F3F5F4";
         ctx.fill();
       }
 
-      // syncing step
+      // Syncing step with progress bar
       if (step === "sync") {
-        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillStyle = "rgba(255,255,255,0.1)";
         roundRect(ctx, 120, 1380, canvas.width - 240, 220, 54);
         ctx.fill();
 
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillStyle = "#F3F5F4";
         ctx.font = "700 48px Inter, system-ui";
         ctx.fillText("Syncing…", 180, 1470);
 
-        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        // Progress bar track
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
         roundRect(ctx, 180, 1520, canvas.width - 360, 18, 18);
         ctx.fill();
 
-        ctx.fillStyle = "#16a34a";
+        // Progress bar fill - bright green
+        ctx.fillStyle = "#1E7A4A";
         roundRect(ctx, 180, 1520, (canvas.width - 360) * local, 18, 18);
         ctx.fill();
       }
 
-      // live step toast + badge
+      // Live step toast + "Live" badge
       if (step === "live") {
-        ctx.fillStyle = "rgba(22,163,74,0.16)";
+        // Toast
+        ctx.fillStyle = "rgba(30,122,74,0.25)";
         roundRect(ctx, 120, 1400, canvas.width - 240, 190, 54);
         ctx.fill();
 
-        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.fillStyle = "#F3F5F4";
         ctx.font = "800 46px Inter, system-ui";
         ctx.fillText("Live in seconds ✓", 180, 1510);
+
+        // "Live" badge in top right - OBVIOUS
+        ctx.fillStyle = "#1E7A4A";
+        roundRect(ctx, canvas.width - 220, 140, 150, 80, 40);
+        ctx.fill();
+
+        ctx.fillStyle = "#F3F5F4";
+        ctx.font = "800 42px Inter, system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("LIVE", canvas.width - 145, 185);
+        ctx.textAlign = "left";
+      } else {
+        // "Preview" badge when not live
+        ctx.fillStyle = "rgba(166,176,170,0.3)";
+        roundRect(ctx, canvas.width - 220, 140, 150, 80, 40);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(166,176,170,0.8)";
+        ctx.font = "600 38px Inter, system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText("Preview", canvas.width - 145, 185);
+        ctx.textAlign = "left";
       }
 
       // "QR unchanged" badge
-      ctx.fillStyle = "rgba(255,255,255,0.07)";
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
       roundRect(ctx, canvas.width - 360, canvas.height - 190, 260, 90, 45);
       ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.font = "700 34px Inter, system-ui";
+      ctx.textAlign = "right";
       ctx.fillText("QR unchanged", canvas.width - 330, canvas.height - 130);
+      ctx.textAlign = "left";
+
+      // Subtle screen glow effect (halo around screen edge)
+      if (step === "live") {
+        ctx.save();
+        ctx.strokeStyle = "rgba(30,122,74,0.15)";
+        ctx.lineWidth = 8;
+        roundRect(ctx, 30, 100, canvas.width - 60, canvas.height - 200, 50);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       texture.needsUpdate = true;
       raf = requestAnimationFrame(draw);
@@ -183,4 +223,3 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.arcTo(x, y, x + w, y, rr);
   ctx.closePath();
 }
-

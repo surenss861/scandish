@@ -9,7 +9,7 @@ export default function HeroBackground3D() {
     <Canvas
       className="h-full w-full"
       dpr={[1, 1.5]}
-      camera={{ position: [0.15, 0.08, 2.75], fov: 28 }}
+      camera={{ position: [0.15, 0.12, 2.75], fov: 28 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
@@ -21,31 +21,43 @@ export default function HeroBackground3D() {
       <directionalLight position={[2, 2, 2]} intensity={1.5} castShadow />
       <pointLight position={[-2, 1, 2]} intensity={0.6} />
       
-      {/* Rim light behind/right for silhouette */}
-      <pointLight position={[3, 0.5, 1]} intensity={0.8} color="#1E7A4A" />
+      {/* Stronger, tighter rim light on right edge + top edge */}
+      <pointLight position={[3.5, 1.2, 0.8]} intensity={1.2} color="#1E7A4A" />
+      <pointLight position={[2.8, 2.5, 0.5]} intensity={0.9} color="#2AAE67" />
       
-      {/* Stage glow spotlight behind phone */}
+      {/* Stage spotlight behind phone (not centered) */}
       <spotLight
-        position={[1.5, 0.5, 2]}
-        angle={0.4}
-        penumbra={0.5}
-        intensity={0.6}
+        position={[1.8, 0.3, 1.5]}
+        angle={0.35}
+        penumbra={0.6}
+        intensity={0.8}
         color="#1E7A4A"
         castShadow={false}
+        target-position={[0.85, 0.05, 0]}
       />
 
       <Environment preset="studio" />
 
-      {/* Phone in hero composition position - more inward, raised, screen-facing */}
+      {/* Phone: BIG, right-anchored, raised, screen-facing */}
       <Suspense fallback={null}>
         <Float speed={1.05} rotationIntensity={0.18} floatIntensity={0.22}>
           <group
-            position={[0.55, 0.02, 0]}  // 15-25% inward from right, raised to headline level
-            rotation={[0.06, -0.32, 0.02]}  // Less yaw rotation, shows more screen face
+            position={[0.85, 0.08, 0]}  // Further right, raised to align with headline top third
+            rotation={[0.05, -0.28, 0.015]}  // More screen-facing, slight premium roll
           >
-            <IPhoneModel heroScale={2.45} />
+            <IPhoneModel heroScale={3.0} />  // 20-35% bigger (was 2.45, now 3.0)
           </group>
         </Float>
+        
+        {/* Soft shadow/occlusion under phone */}
+        <mesh position={[0.85, -0.4, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[1.2, 1.2]} />
+          <meshBasicMaterial 
+            color="#000000" 
+            transparent 
+            opacity={0.15}
+          />
+        </mesh>
       </Suspense>
     </Canvas>
   );

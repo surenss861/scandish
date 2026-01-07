@@ -98,19 +98,19 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     console.log("✅ Applying texture to screen mesh:", screenMesh.name);
     applyTextureToMesh(screenMesh, screenTex);
 
-    // Make glass layers less opaque so screen shows through
+    // Make glass layers less opaque so screen shows through (more reduction)
     glassMeshes.forEach((glass) => {
       if (glass.material) {
         if (Array.isArray(glass.material)) {
           glass.material.forEach((mat) => {
             if (mat) {
-              mat.opacity = 0.85; // Reduce glass opacity
+              mat.opacity = 0.75; // Reduced more (was 0.85)
               mat.transparent = true;
               mat.needsUpdate = true;
             }
           });
         } else {
-          glass.material.opacity = 0.85;
+          glass.material.opacity = 0.75; // Reduced more
           glass.material.transparent = true;
           glass.material.needsUpdate = true;
         }
