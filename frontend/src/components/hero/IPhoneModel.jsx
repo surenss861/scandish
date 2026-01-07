@@ -55,7 +55,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     // ✅ Apply texture directly to original screen mesh (no replacement plane)
     if (foundScreenMesh) {
       console.log("✅ Found screen mesh:", foundScreenMesh.name);
-      
+
       // Configure texture for GLTF mesh (flipY = false for GLTF)
       screenTex.flipY = false; // GLTF UVs expect flipY = false
       screenTex.needsUpdate = true;
@@ -83,7 +83,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
       foundScreenMesh.material.needsUpdate = true;
       foundScreenMesh.visible = true; // Keep it visible!
-      
+
       console.log("✅ Applied texture to original screen mesh");
     } else {
       console.error("❌ Screen mesh not found:", SCREEN_MESH_NAME);
@@ -124,17 +124,25 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       notch.renderOrder = 1000; // Render last (on top)
     });
 
-    // Hide GLB front glass/tint that covers the whole screen (brittle materials)
+    // AGGRESSIVELY hide ALL front glass/tint/filter/display meshes that could block the screen
+    // These are the blockers causing the grey reflective slab
+    const blockerNames = [
+      "14", "53", "front", "tint", "filter", "mirror", "display", "screencover", 
+      "frontglass", "displayglass", "screen_glass", "cover"
+    ];
+    
     glassMeshes.forEach((glass) => {
       const name = (glass.name ?? "").toLowerCase();
       const matName = glass.material?.name?.toLowerCase?.() ?? "";
-
-      // Hide GLB front glass/tint that covers the whole screen (brittle materials)
-      if (name.includes("14") || name.includes("53") || name.includes("front") ||
-        name.includes("tint") || matName.includes("tint") ||
-        (name.includes("glass") && (name.includes("front") || name.includes("display")))) {
-        console.log("🚫 Hiding GLB front glass/tint (brittle):", glass.name);
-        glass.visible = false;
+      
+      // Check if this is a front-facing blocker (not bezel/back glass)
+      const isBlocker = blockerNames.some(blocker => 
+        name.includes(blocker) || matName.includes(blocker)
+      );
+      
+      if (isBlocker) {
+        console.log("🚫 HIDING BLOCKER:", glass.name, "| material:", matName);
+        glass.visible = false; // Fully hide - no transparency tricks
       } else {
         // Other glass (bezel, back) - make transparent
         if (Array.isArray(glass.material)) {
@@ -149,6 +157,28 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           glass.material.opacity = 0.3;
           glass.material.transparent = true;
           glass.material.needsUpdate = true;
+        }
+      }
+    });
+    
+    // Also check ALL meshes for potential blockers (not just glass-labeled ones)
+    root.traverse((obj) => {
+      if (obj.isMesh && obj !== foundScreenMesh) {
+        const name = (obj.name ?? "").toLowerCase();
+        const matName = obj.material?.name?.toLowerCase?.() ?? "";
+        
+        // Check if this looks like a front display blocker
+        const looksLikeBlocker = (
+          (name.includes("mirror") && name.includes("filter")) ||
+          (name.includes("tint") && name.includes("back")) ||
+          (name.includes("front") && (name.includes("glass") || name.includes("display") || name.includes("cover"))) ||
+          (matName.includes("tint") && matName.includes("back")) ||
+          (matName.includes("mirror") && matName.includes("filter"))
+        );
+        
+        if (looksLikeBlocker) {
+          console.log("🚫 HIDING ADDITIONAL BLOCKER:", obj.name, "| material:", matName);
+          obj.visible = false;
         }
       }
     });
