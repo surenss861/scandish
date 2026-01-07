@@ -7,16 +7,9 @@ import { usePhoneDemoTexture } from "../../hooks/usePhoneDemoTexture.js";
 const SCREEN_MESH_NAME = "Object_55";
 
 function applyTextureToMesh(mesh, tex) {
-  tex.flipY = false;
+  // Configure texture properly
+  tex.flipY = false; // Critical: match GLTF UV expectations
   tex.needsUpdate = true;
-
-  // Ensure texture fits the screen mesh properly
-  // Get the mesh bounding box to calculate proper UV mapping
-  const box = new THREE.Box3().setFromObject(mesh);
-  const size = new THREE.Vector3();
-  box.getSize(size);
-
-  // Set texture to repeat/offset if needed to fit screen
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.minFilter = THREE.LinearFilter;
@@ -24,15 +17,14 @@ function applyTextureToMesh(mesh, tex) {
   tex.generateMipmaps = false; // Disable mipmaps for crisp text
   tex.colorSpace = THREE.SRGBColorSpace; // Ensure sRGB for proper whites
 
+  // Option A: MeshBasicMaterial (unlit billboard) - simplest + most reliable
+  // MeshBasicMaterial doesn't support emissive properties, so we use map only
   const makeMat = () =>
     new THREE.MeshBasicMaterial({
-      map: tex,
+      map: tex, // The demo texture as the main map
+      color: new THREE.Color(0xffffff), // Pure white so texture shows at full brightness
       toneMapped: false, // Critical: don't tone map the screen
       transparent: false,
-      // Make it truly unlit and emissive - like a real OLED panel
-      emissive: new THREE.Color(0xffffff),
-      emissiveMap: tex,
-      emissiveIntensity: 1.4, // Increased emissive for hero visibility
     });
 
   if (Array.isArray(mesh.material)) {
