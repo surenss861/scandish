@@ -29,12 +29,12 @@ export function usePhoneDemoTexture() {
 
       const t = (now - start) / 1000;
 
-      // timeline loop - start on bright "menu" state
+      // timeline loop - start on bright "menu" state, make demo obvious in <1s
       const steps = [
-        { name: "menu", dur: 3.0 }, // Longer menu state so it's the default
-        { name: "edit", dur: 2.2 },
-        { name: "sync", dur: 1.8 },
-        { name: "live", dur: 2.5 }, // Longer live state
+        { name: "menu", dur: 4.0 }, // Long menu state - this is the "hero frame"
+        { name: "edit", dur: 1.5 }, // Quick edit moment
+        { name: "sync", dur: 1.2 }, // Quick syncing
+        { name: "live", dur: 3.0 }, // Long live state - obvious result
       ];
       const total = steps.reduce((a, s) => a + s.dur, 0);
       let tt = t % total;
@@ -50,9 +50,10 @@ export function usePhoneDemoTexture() {
         tt -= s.dur;
       }
 
-      // Background - slightly lighter so it reads as "on"
+      // Background - bright enough to read as "OLED on"
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#0F1412"; // Slightly lighter than pure black
+      // Solid background fill - critical for visibility
+      ctx.fillStyle = "#121816"; // Lighter background so it reads as "on"
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Top bar - much brighter, more contrast
@@ -64,33 +65,35 @@ export function usePhoneDemoTexture() {
       ctx.font = "700 58px Inter, system-ui";
       ctx.fillText("Demo Restaurant", 120, 230);
 
-      // Menu cards with MAXIMUM contrast - big bright anchor elements
+      // Menu cards - 3 big items, MAXIMUM contrast, reads in 0.5s
       const items = [
-        ["Margherita Pizza", step === "live" ? "$14.99" : "$16.99"], // Price changes!
+        ["Margherita Pizza", step === "live" ? "$14.99" : "$16.99"], // OBVIOUS price change
         ["Caesar Salad", "$12.99"],
-        ["Pasta Carbonara", step === "live" ? "$19.99" : "$18.99"], // Price changes!
+        ["Pasta Carbonara", step === "live" ? "$19.99" : "$18.99"], // OBVIOUS price change
       ];
-      let y = 380;
+      let y = 400;
       for (const [name, price] of items) {
-        // Card background - much brighter white cards
-        ctx.fillStyle = "#1A211E";
-        ctx.strokeStyle = "rgba(30,122,74,0.3)";
-        ctx.lineWidth = 2;
-        roundRect(ctx, 90, y, canvas.width - 180, 170, 44);
+        // Card background - bright white cards (high contrast)
+        ctx.fillStyle = "#1F2522";
+        ctx.strokeStyle = step === "live" && (price.includes("14.99") || price.includes("19.99")) 
+          ? "rgba(30,122,74,0.6)" // Highlight changed prices
+          : "rgba(30,122,74,0.25)";
+        ctx.lineWidth = 3;
+        roundRect(ctx, 80, y, canvas.width - 160, 180, 48);
         ctx.fill();
         ctx.stroke();
 
-        // Text - pure white, bolder
+        // Text - pure white, bigger
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "700 48px Inter, system-ui";
-        ctx.fillText(name, 140, y + 110);
+        ctx.font = "800 52px Inter, system-ui";
+        ctx.fillText(name, 120, y + 115);
 
-        // Price - bright green, larger
+        // Price - bright green, even larger
         ctx.fillStyle = "#1E7A4A";
-        ctx.font = "900 50px Inter, system-ui";
-        ctx.fillText(price, canvas.width - 300, y + 110);
+        ctx.font = "900 56px Inter, system-ui";
+        ctx.fillText(price, canvas.width - 280, y + 115);
 
-        y += 210;
+        y += 220;
       }
 
       // Primary button - bright green
@@ -162,29 +165,30 @@ export function usePhoneDemoTexture() {
         ctx.font = "800 46px Inter, system-ui";
         ctx.fillText("Live in seconds ✓", 180, 1510);
 
-        // "Live" badge in top right - BIGGER with subtle glow
-        const badgeX = canvas.width - 240;
-        const badgeY = 130;
-        const badgeW = 170;
-        const badgeH = 90;
+        // "Live" badge - EXTREMELY OBVIOUS, bigger, glowing
+        const badgeX = canvas.width - 260;
+        const badgeY = 120;
+        const badgeW = 190;
+        const badgeH = 100;
         
-        // Glow effect (outer glow)
-        ctx.shadowColor = "rgba(30,122,74,0.6)";
-        ctx.shadowBlur = 20;
+        // Outer glow (multiple layers for strong glow)
+        ctx.shadowColor = "rgba(30,122,74,0.8)";
+        ctx.shadowBlur = 30;
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 45);
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 50);
         ctx.fill();
-        ctx.shadowBlur = 0; // Reset
+        ctx.shadowBlur = 0;
         
-        // Badge itself
+        // Badge itself - bright green
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 45);
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 50);
         ctx.fill();
 
+        // Text - pure white, bigger
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 46px Inter, system-ui";
+        ctx.font = "900 50px Inter, system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("LIVE", canvas.width - 155, 180);
+        ctx.fillText("LIVE", canvas.width - 165, 175);
         ctx.textAlign = "left";
       } else {
         // "Preview" badge when not live

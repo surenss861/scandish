@@ -13,8 +13,11 @@ function applyTextureToMesh(mesh, tex) {
   const makeMat = () =>
     new THREE.MeshBasicMaterial({
       map: tex,
-      toneMapped: false,
+      toneMapped: false, // Critical: don't tone map the screen
       transparent: false,
+      // Add subtle emissive so it glows like OLED
+      emissive: new THREE.Color(0x1a1a1a),
+      emissiveIntensity: 0.3,
     });
 
   if (Array.isArray(mesh.material)) {
@@ -98,26 +101,51 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     console.log("✅ Applying texture to screen mesh:", screenMesh.name);
     applyTextureToMesh(screenMesh, screenTex);
 
-    // Make glass layers much less dominant - keep reflections mainly on bezel
-    glassMeshes.forEach((glass) => {
+    // Aggressively reduce glass dominance - hide front glass if needed
+    glassMeshes.forEach((glass, idx) => {
       if (glass.material) {
-        if (Array.isArray(glass.material)) {
-          glass.material.forEach((mat) => {
-            if (mat) {
-              mat.opacity = 0.65; // Reduced significantly (was 0.75)
-              mat.transparent = true;
-              // Reduce metalness/roughness to make it less reflective
-              if (mat.metalness !== undefined) mat.metalness = Math.min(0.3, mat.metalness);
-              if (mat.roughness !== undefined) mat.roughness = Math.max(0.6, mat.roughness);
-              mat.needsUpdate = true;
-            }
-          });
+        // Hide glass meshes that are likely in front of screen (Object_14, Object_53)
+        const name = (glass.name ?? "").toLowerCase();
+        if (name.includes("glass") && (name.includes("14") || name.includes("53") || name.includes("front"))) {
+          // Option: hide completely for bulletproof visibility
+          // glass.visible = false;
+          // Or: make it very transparent
+          if (Array.isArray(glass.material)) {
+            glass.material.forEach((mat) => {
+              if (mat) {
+                mat.opacity = 0.5; // Very transparent
+                mat.transparent = true;
+                if (mat.metalness !== undefined) mat.metalness = 0.1;
+                if (mat.roughness !== undefined) mat.roughness = 0.8;
+                mat.needsUpdate = true;
+              }
+            });
+          } else {
+            glass.material.opacity = 0.5;
+            glass.material.transparent = true;
+            if (glass.material.metalness !== undefined) glass.material.metalness = 0.1;
+            if (glass.material.roughness !== undefined) glass.material.roughness = 0.8;
+            glass.material.needsUpdate = true;
+          }
         } else {
-          glass.material.opacity = 0.65; // Reduced significantly
-          glass.material.transparent = true;
-          if (glass.material.metalness !== undefined) glass.material.metalness = Math.min(0.3, glass.material.metalness);
-          if (glass.material.roughness !== undefined) glass.material.roughness = Math.max(0.6, glass.material.roughness);
-          glass.material.needsUpdate = true;
+          // Other glass (bezel, back) - keep but reduce
+          if (Array.isArray(glass.material)) {
+            glass.material.forEach((mat) => {
+              if (mat) {
+                mat.opacity = 0.7;
+                mat.transparent = true;
+                if (mat.metalness !== undefined) mat.metalness = Math.min(0.3, mat.metalness);
+                if (mat.roughness !== undefined) mat.roughness = Math.max(0.6, mat.roughness);
+                mat.needsUpdate = true;
+              }
+            });
+          } else {
+            glass.material.opacity = 0.7;
+            glass.material.transparent = true;
+            if (glass.material.metalness !== undefined) glass.material.metalness = Math.min(0.3, glass.material.metalness);
+            if (glass.material.roughness !== undefined) glass.material.roughness = Math.max(0.6, glass.material.roughness);
+            glass.material.needsUpdate = true;
+          }
         }
       }
     });

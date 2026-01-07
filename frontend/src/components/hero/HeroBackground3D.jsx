@@ -38,57 +38,82 @@ export default function HeroBackground3D() {
 
       <Environment preset="studio" />
 
-      {/* Phone: BIG, right-anchored, raised, screen-facing */}
+      {/* Phone: BIG, centered-left, face-on, hero product */}
       <Suspense fallback={null}>
-        <Float speed={1.05} rotationIntensity={0.18} floatIntensity={0.22}>
-          <group
-            position={[0.85, 0.08, 0]}  // Further right, raised to align with headline top third
-            rotation={[0.05, -0.28, 0.015]}  // More screen-facing, slight premium roll
-          >
-            <IPhoneModel heroScale={3.0} />  // 20-35% bigger (was 2.45, now 3.0)
-          </group>
-        </Float>
+        {/* Stage spotlight pocket behind phone (tight radial glow) */}
+        <pointLight 
+          position={[0.55, 0.15, 1.2]} 
+          intensity={1.5} 
+          color="#1E7A4A"
+          distance={2.5}
+          decay={2}
+        />
         
-        {/* Soft shadow/occlusion under phone */}
-        <mesh position={[0.85, -0.4, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[1.2, 1.2]} />
+        {/* Vignette around stage pocket */}
+        <mesh position={[0.55, 0.15, 0.5]} rotation={[0, 0, 0]}>
+          <ringGeometry args={[1.8, 3.5, 32]} />
           <meshBasicMaterial 
             color="#000000" 
             transparent 
-            opacity={0.15}
+            opacity={0.4}
+            side={THREE.DoubleSide}
           />
         </mesh>
         
-        {/* Floating callout near phone */}
-        <group position={[0.5, 0.3, 0]}>
+        <Float speed={1.05} rotationIntensity={0.18} floatIntensity={0.22}>
+          <group
+            position={[0.55, 0.12, 0]}  // Moved left ~15%, raised to "update in seconds" line
+            rotation={[0.04, -0.22, 0.01]}  // Less yaw, more face-on (was -0.28)
+          >
+            <IPhoneModel heroScale={3.5} />  // Bigger - visually competes with headline
+          </group>
+        </Float>
+        
+        {/* Soft occlusion shadow under phone (grounded) */}
+        <mesh position={[0.55, -0.35, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[1.5, 1.5]} />
+          <meshBasicMaterial 
+            color="#000000" 
+            transparent 
+            opacity={0.25}
+          />
+        </mesh>
+        
+        {/* Small elegant callout label near phone edge */}
+        <group position={[0.25, 0.25, 0]}>
           <mesh>
-            <planeGeometry args={[0.65, 0.18]} />
+            <planeGeometry args={[0.5, 0.12]} />
             <meshBasicMaterial 
               color="#101614" 
               transparent 
-              opacity={0.9}
+              opacity={0.85}
             />
           </mesh>
           <Text
-            position={[0, 0.02, 0.01]}
-            fontSize={0.045}
+            position={[0, 0, 0.01]}
+            fontSize={0.035}
             color="#F3F5F4"
             anchorX="center"
             anchorY="middle"
-            maxWidth={0.6}
+            maxWidth={0.45}
           >
-            Edit price → updates live
+            Edit → Live
           </Text>
           <Text
-            position={[0, -0.03, 0.01]}
-            fontSize={0.032}
+            position={[0, -0.04, 0.01]}
+            fontSize={0.025}
             color="#A6B0AA"
             anchorX="center"
             anchorY="middle"
-            maxWidth={0.6}
+            maxWidth={0.45}
           >
             QR unchanged
           </Text>
+          {/* Subtle dot anchor */}
+          <mesh position={[0.28, 0, 0.01]}>
+            <circleGeometry args={[0.008, 16]} />
+            <meshBasicMaterial color="#1E7A4A" />
+          </mesh>
         </group>
       </Suspense>
     </Canvas>
