@@ -27,9 +27,9 @@ export default function HeroShowcase3D() {
       <Canvas
         dpr={[1, 1.5]}
         camera={{ position: [0, 0.05, 1.6], fov: 35 }}
-        gl={{ 
-          antialias: true, 
-          powerPreference: "high-performance", 
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
           alpha: true
         }}
         shadows

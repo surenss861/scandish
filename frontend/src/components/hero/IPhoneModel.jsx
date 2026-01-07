@@ -6,20 +6,18 @@ import * as THREE from "three";
 export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) {
   const group = useRef(null);
   const sceneRef = useRef(null);
-  
+
   console.log("🔵 IPhoneModel component rendering, loading:", url);
-  
+
   // Load the GLB model
   const { scene } = useGLTF(url);
-  
+
   // Auto-fit model to target size
   useEffect(() => {
     if (!scene) return;
     
-    sceneRef.current = scene.clone(); // Clone to avoid mutating the original
-    
-    // Auto-fit model to a target height
-    const box = new THREE.Box3().setFromObject(sceneRef.current);
+    // Auto-fit model to a target height (mutate original scene)
+    const box = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
@@ -31,14 +29,16 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     });
     
     // Center it
-    sceneRef.current.position.sub(center);
+    scene.position.sub(center);
     
     // Scale it (target height in "three units")
     const targetHeight = 1.6;
     const scaleFactor = targetHeight / size.y;
-    sceneRef.current.scale.setScalar(scaleFactor);
+    scene.scale.setScalar(scaleFactor);
     
     console.log("✅ Auto-scaled model:", { scaleFactor: scaleFactor.toFixed(3), targetHeight });
+    
+    sceneRef.current = scene; // Store reference for screen texture
     
     if (onLoaded) {
       onLoaded();
@@ -51,21 +51,21 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
   canvas.width = 1170;
   canvas.height = 2532;
   const ctx = canvas.getContext("2d");
-  
+
   // Draw menu preview (mock of the actual menu page)
   ctx.fillStyle = "#0B0F0E";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  
+
   // Header bar
   ctx.fillStyle = "#101614";
   ctx.fillRect(0, 0, canvas.width, 120);
-  
+
   // Restaurant name
   ctx.fillStyle = "#F3F5F4";
   ctx.font = "bold 70px Inter, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("Demo Restaurant", canvas.width / 2, 75);
-  
+
   // Menu items
   let yPos = 250;
   const items = [
@@ -73,38 +73,38 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     { name: "Caesar Salad", price: "$12.99", category: "Salads" },
     { name: "Pasta Carbonara", price: "$18.99", category: "Pasta" },
   ];
-  
+
   // Category header
   ctx.fillStyle = "#A6B0AA";
   ctx.font = "600px 40px Inter, sans-serif";
   ctx.textAlign = "left";
   ctx.fillText("PIZZA", 80, 220);
-  
+
   items.forEach((item) => {
     // Item card background
     ctx.fillStyle = "#101614";
     ctx.fillRect(60, yPos - 30, canvas.width - 120, 80);
-    
+
     // Item name
     ctx.fillStyle = "#F3F5F4";
     ctx.font = "50px Inter, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(item.name, 80, yPos + 20);
-    
+
     // Price
     ctx.fillStyle = "#1E7A4A";
     ctx.textAlign = "right";
     ctx.fillText(item.price, canvas.width - 80, yPos + 20);
-    
+
     yPos += 120;
   });
-  
+
   const screenTex = new THREE.CanvasTexture(canvas);
   screenTex.flipY = false;
   screenTex.colorSpace = THREE.SRGBColorSpace;
 
   useEffect(() => {
-    if (!sceneRef.current) {
+    if (!scene) {
       console.error("❌ Scene is null, cannot apply screen texture");
       return;
     }
@@ -112,9 +112,9 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
 
     // Based on GLTF: Screen_14 node contains Display material (material index 14)
-    const screenNode = sceneRef.current.getObjectByName("Screen_14");
+    const screenNode = scene.getObjectByName("Screen_14");
     let screenFound = false;
-    
+
     if (screenNode) {
       console.log("✅ Found Screen_14 node");
       screenNode.traverse((obj) => {
@@ -134,11 +134,11 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
 
     // Also try direct material name search
     if (!screenFound) {
-      sceneRef.current.traverse((obj) => {
+      scene.traverse((obj) => {
         if (obj.isMesh && obj.material) {
           const name = obj.name || "unnamed";
           const matName = obj.material.name || "no material";
-          
+
           if (matName.toLowerCase().includes("display")) {
             console.log(`✅ Found display mesh: "${name}" | material: "${matName}"`);
             obj.material.map = screenTex;
@@ -152,7 +152,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     }
 
     // Enhance other materials
-    sceneRef.current.traverse((obj) => {
+    scene.traverse((obj) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
@@ -172,12 +172,12 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
   });
 
   // Auto-fitted model - simple positioning
-  if (!sceneRef.current) return null;
+  if (!scene) return null;
   
   return (
     <group ref={group} position={[0, -0.2, 0]}>
       <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.22}>
-        <primitive object={sceneRef.current} />
+        <primitive object={scene} />
       </Float>
     </group>
   );
