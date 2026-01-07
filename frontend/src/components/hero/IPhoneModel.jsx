@@ -1,542 +1,237 @@
-import { useEffect, useMemo } from "react";
-import { useGLTF } from "@react-three/drei";
+import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import { useGLTF } from "@react-three/drei";
+import { useThree } from "@react-three/fiber";
 import { usePhoneDemoTexture } from "../../hooks/usePhoneDemoTexture.js";
 
-// Screen mesh - we'll find it by geometry (flat/large, not glass/tint/mirror)
-// Fallback to Object_55 if geometry-based search fails
-const SCREEN_MESH_NAME_FALLBACK = "Object_55";
+// =====================
+// DEBUG TOGGLES
+// =====================
+const NEON_TEST = false;              // neon the chosen visible screen surface
+const DEBUG_SOLO_SCREEN = false;      // hide everything except visible screen (+ notch)
+const DEBUG_HIDE_GLASS = false;       // hard-hide any glass-like meshes
+const FORCE_DOUBLE_SIDE = true;       // fixes "screen is backfacing" issues
+const LOG_RAYCAST = true;
+
+// If your GLB changes, keep this as a fallback only:
+const FALLBACK_SCREEN_NAME = "Object_55";
+
+// =====================
+// HELPERS
+// =====================
+const lower = (v) => (v || "").toString().toLowerCase();
+
+function materialLabel(mat) {
+  if (!mat) return "";
+  return lower(mat.name || mat.type || "");
+}
+
+function meshLabel(obj) {
+  return lower(obj?.name || "");
+}
+
+function isGlassLike(mesh) {
+  const n = meshLabel(mesh);
+  const m = materialLabel(mesh.material);
+
+  // keyword-based
+  const keyword =
+    m.includes("glass") ||
+    m.includes("tint") ||
+    m.includes("mirror") ||
+    m.includes("filter") ||
+    n.includes("glass") ||
+    n.includes("tint") ||
+    n.includes("mirror") ||
+    n.includes("filter");
+
+  // material-property-based (very reliable)
+  const mat = mesh.material;
+  const physical =
+    mat &&
+    (mat.transmission > 0 ||
+      mat.opacity < 1 ||
+      mat.transparent === true ||
+      mat.type === "MeshPhysicalMaterial");
+
+  return keyword || physical;
+}
+
+function bboxArea(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  // approximate front-face area (best effort)
+  // screen is usually X * Y in local-ish space; take 2 largest dims
+  const dims = [Math.abs(size.x), Math.abs(size.y), Math.abs(size.z)].sort((a, b) => b - a);
+  return dims[0] * dims[1];
+}
+
+function worldCenter(mesh) {
+  const box = new THREE.Box3().setFromObject(mesh);
+  const center = new THREE.Vector3();
+  box.getCenter(center);
+  return center;
+}
+
+function setCoverGlassLook(mesh) {
+  // make it visible as a sheen but never blocking
+  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  mats.forEach((mat) => {
+    if (!mat) return;
+    mat.transparent = true;
+    mat.opacity = 0.08;
+    mat.depthWrite = false;
+    mat.depthTest = true;
+    mat.side = FORCE_DOUBLE_SIDE ? THREE.DoubleSide : mat.side;
+    mat.needsUpdate = true;
+  });
+
+  mesh.renderOrder = 998;
+}
+
+function setScreenMaterial(mesh, demoTexture) {
+  const mat = new THREE.MeshBasicMaterial({
+    color: NEON_TEST ? new THREE.Color("#00ff66") : new THREE.Color("#ffffff"),
+    map: NEON_TEST ? null : demoTexture,
+    transparent: false,
+    toneMapped: false,
+    side: FORCE_DOUBLE_SIDE ? THREE.DoubleSide : THREE.FrontSide,
+  });
+
+  // avoid z-fighting with nearby cover meshes
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = -1;
+  mat.polygonOffsetUnits = -1;
+
+  mesh.material = mat;
+  mesh.renderOrder = 997;
+
+  // important when swapping materials
+  mesh.material.needsUpdate = true;
+}
 
 export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
-  const { scene } = useGLTF("/models/scandish.glb");
-  const screenTex = usePhoneDemoTexture();
-
+  const group = useRef();
+  const { camera } = useThree();
+  const { scene: gltfScene } = useGLTF("/models/scandish.glb");
+  const demoTexture = usePhoneDemoTexture();
+  
   // CRITICAL: Don't clone - modify the actual scene instance that gets rendered
-  const root = useMemo(() => scene, [scene]);
+  const scene = useMemo(() => gltfScene, [gltfScene]);
 
-  // Apply texture directly to original screen mesh + hide problematic blockers
   useEffect(() => {
-    if (!screenTex || !screenTex.image) {
-      console.warn("⚠️ Screen texture not ready yet");
+    if (!scene || !camera || !demoTexture || !demoTexture.image) {
+      console.warn("⚠️ Scene, camera, or texture not ready yet");
       return;
     }
 
-    let foundScreenMesh = null;
-    const glassMeshes = [];
-    const notchMeshes = []; // Camera, notch, speaker - keep visible
-    const filterMeshes = []; // Mirror_filter, Tint_back_glass, etc.
-    const allPotentialBlockers = []; // For diagnostics
+    const meshes = [];
+    scene.traverse((obj) => {
+      if (obj && obj.isMesh) {
+        meshes.push(obj);
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+      }
+    });
 
-    root.traverse((obj) => {
-      if (obj.isMesh) {
-        // Fallback: find screen mesh by name (Object_55) - but we'll use geometry-based selection instead
-        if (obj.name === SCREEN_MESH_NAME_FALLBACK) {
-          // Store as fallback, but prefer geometry-based selection
-        }
-        // Find glass layers
-        const matName = obj.material?.name?.toLowerCase?.() ?? "";
-        const objName = (obj.name ?? "").toLowerCase();
-        if (matName.includes("glass") || objName.includes("glass")) {
-          glassMeshes.push(obj);
-        }
-        // Find notch/camera/speaker meshes (keep visible for realism)
-        if (objName.includes("camera") || objName.includes("notch") || objName.includes("speaker") ||
-          matName.includes("camera") || matName.includes("sapphire") ||
-          (objName.includes("filter") && (objName.includes("camera") || objName.includes("37") || objName.includes("18") || objName.includes("28") || objName.includes("7")))) {
-          notchMeshes.push(obj);
-        }
-        // Find filter/overlay meshes (tint, mirror - these block screen)
-        if ((objName.includes("filter") || objName.includes("mirror") || objName.includes("tint") ||
-          matName.includes("filter") || matName.includes("mirror") || matName.includes("tint")) &&
-          !notchMeshes.includes(obj)) {
-          filterMeshes.push(obj);
-        }
+    // 1) Find a reasonable "target" point to raycast toward (fallback screen by name if present)
+    let fallbackScreen = meshes.find((m) => m.name === FALLBACK_SCREEN_NAME);
 
-        // Diagnostic: collect all potential blockers (flat, large area, front-facing)
-        const blockerKeywords = ["14", "53", "front", "tint", "filter", "mirror", "display", "cover", "glass"];
-        const isPotentialBlocker = blockerKeywords.some(kw =>
-          objName.includes(kw) || matName.includes(kw)
+    // also treat "display" material as strong hint
+    if (!fallbackScreen) {
+      fallbackScreen = meshes.find((m) => materialLabel(m.material).includes("display"));
+    }
+
+    if (!fallbackScreen) {
+      console.warn("⚠️ No fallback display mesh found (Object_55 / material: display). Raycast will still run.");
+      // use overall phone center as a last resort
+    }
+
+    const targetPoint = fallbackScreen ? worldCenter(fallbackScreen) : worldCenter(scene);
+
+    // 2) Raycast from camera -> targetPoint to find what is ACTUALLY visible
+    const dir = new THREE.Vector3().subVectors(targetPoint, camera.position).normalize();
+    const raycaster = new THREE.Raycaster(camera.position.clone(), dir);
+    raycaster.firstHitOnly = false;
+
+    const intersects = raycaster.intersectObjects(meshes, true);
+
+    if (LOG_RAYCAST) {
+      console.log("🎯 RAYCAST hits (nearest first):");
+      intersects.slice(0, 8).forEach((hit, i) => {
+        const obj = hit.object;
+        console.log(
+          `  ${i + 1}. ${obj.name} | mat: ${obj.material?.name || obj.material?.type} | dist: ${hit.distance.toFixed(4)} | glassLike: ${isGlassLike(obj)}`
         );
-        if (isPotentialBlocker && obj !== foundScreenMesh) {
-          const box = new THREE.Box3().setFromObject(obj);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          const area = size.x * size.y;
-          const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
-          if (flat > 10 && area > 0.1) { // Flat and large = likely blocker
-            allPotentialBlockers.push({
-              name: obj.name,
-              material: matName,
-              area: area.toFixed(3),
-              flat: flat.toFixed(1),
-              visible: obj.visible
-            });
-          }
-        }
-      }
-    });
-
-    // Log all potential blockers for diagnostics
-    if (allPotentialBlockers.length > 0) {
-      console.log("🔍 POTENTIAL BLOCKERS FOUND:");
-      allPotentialBlockers.forEach(b => {
-        console.log(`  - ${b.name} | material: ${b.material} | area: ${b.area} | flat: ${b.flat} | visible: ${b.visible}`);
       });
     }
 
+    // 3) Make nearby glass layers non-blocking (or hide them if debugging)
+    //    We only do this for meshes roughly the same "screen" size so we don't destroy the whole phone.
+    const screenArea = fallbackScreen ? bboxArea(fallbackScreen) : null;
 
-    // ✅ Apply texture directly to original screen mesh (no replacement plane)
-    if (foundScreenMesh) {
-      console.log("✅ Found screen mesh:", foundScreenMesh.name);
+    meshes.forEach((m) => {
+      if (!isGlassLike(m)) return;
 
-      // TEMPORARY: Make selected screen mesh neon to prove it's visible
-      // If screen doesn't turn neon, something else is covering it
-      const NEON_TEST = false; // Set to true to test
-      // Force neon test to Object_55 specifically (for verification)
-      const FORCE_NEON_TO_OBJECT_55 = false; // Set to true to test Object_55 specifically
-
-      if (NEON_TEST) {
-        let testMesh = foundScreenMesh;
-
-        // Optional: Force test to Object_55 specifically
-        if (FORCE_NEON_TO_OBJECT_55) {
-          root.traverse((obj) => {
-            if (obj.isMesh && obj.name === SCREEN_MESH_NAME_FALLBACK) {
-              testMesh = obj;
-              console.log("🧪 FORCING neon test to Object_55 specifically");
-            }
-          });
-        }
-
-        if (testMesh) {
-          const neonMat = new THREE.MeshBasicMaterial({
-            color: new THREE.Color(0x00ff00), // Bright green
-            toneMapped: false,
-          });
-          if (Array.isArray(testMesh.material)) {
-            testMesh.material = testMesh.material.map(() => neonMat);
-          } else {
-            testMesh.material = neonMat;
-          }
-          testMesh.material.needsUpdate = true;
-          testMesh.visible = true;
-          console.log("🧪 NEON TEST: Screen mesh should be bright green. If not, it's covered.");
-          console.log("🧪 Testing mesh:", testMesh.name);
-          console.log("🧪 Check the phone screen - is it neon green or still grey?");
-        }
-        // Don't return early - let the blocker detection run too
+      if (DEBUG_HIDE_GLASS) {
+        m.visible = false;
+        return;
       }
 
-      // Configure texture for GLTF mesh (flipY = false for GLTF)
-      screenTex.flipY = false; // GLTF UVs expect flipY = false
-      screenTex.needsUpdate = true;
-      screenTex.wrapS = THREE.ClampToEdgeWrapping;
-      screenTex.wrapT = THREE.ClampToEdgeWrapping;
-      screenTex.minFilter = THREE.LinearFilter;
-      screenTex.magFilter = THREE.LinearFilter;
-      screenTex.generateMipmaps = false;
-      screenTex.colorSpace = THREE.SRGBColorSpace;
-
-      // Replace material with MeshBasicMaterial (unlit, bright, no tone mapping)
-      const material = new THREE.MeshBasicMaterial({
-        map: screenTex,
-        color: new THREE.Color(0xffffff),
-        toneMapped: false, // Critical: don't tone map the screen
-        transparent: false,
-      });
-      material.needsUpdate = true;
-
-      if (Array.isArray(foundScreenMesh.material)) {
-        foundScreenMesh.material = foundScreenMesh.material.map(() => material);
-      } else {
-        foundScreenMesh.material = material;
-      }
-
-      foundScreenMesh.material.needsUpdate = true;
-      foundScreenMesh.visible = true; // Keep it visible!
-
-      // Set render order and depth settings for Object_55 (screen)
-      foundScreenMesh.renderOrder = 997; // Render before cover glass
-      foundScreenMesh.frustumCulled = false;
-      if (foundScreenMesh.material) {
-        if (Array.isArray(foundScreenMesh.material)) {
-          foundScreenMesh.material.forEach((mat) => {
-            if (mat) {
-              mat.depthWrite = true;
-              mat.depthTest = true;
-              mat.polygonOffset = true;
-              mat.polygonOffsetFactor = -1;
-              mat.polygonOffsetUnits = -1;
-              mat.needsUpdate = true;
-            }
-          });
-        } else {
-          foundScreenMesh.material.depthWrite = true;
-          foundScreenMesh.material.depthTest = true;
-          foundScreenMesh.material.polygonOffset = true;
-          foundScreenMesh.material.polygonOffsetFactor = -1;
-          foundScreenMesh.material.polygonOffsetUnits = -1;
-          foundScreenMesh.material.needsUpdate = true;
-        }
-      }
-
-      console.log("✅ Applied texture to original screen mesh");
-
-      // Make Object_54 (front cover) transparent and non-blocking
-      const DEBUG_HIDE_OBJECT54 = false; // Set to true to test if Object_54 is the blocker
-      root.traverse((obj) => {
-        if (!obj.isMesh) return;
-
-        // Force Object_54 to behave like transparent cover glass (not opaque blocker)
-        if (obj.name === "Object_54") {
-          if (DEBUG_HIDE_OBJECT54) {
-            console.log("🧪 DEBUG: Hiding Object_54 to test if it's the blocker");
-            obj.visible = false;
-            return;
-          }
-
-          console.log("🔧 Making Object_54 transparent (non-blocking cover glass)");
-          const m = obj.material;
-          if (m) {
-            if (Array.isArray(m)) {
-              m.forEach((mat) => {
-                if (mat) {
-                  mat.transparent = true;
-                  mat.opacity = 0.08; // Subtle sheen
-                  mat.depthWrite = false; // KEY: don't block the display
-                  mat.depthTest = true;
-                  mat.needsUpdate = true;
-                }
-              });
-            } else {
-              m.transparent = true;
-              m.opacity = 0.08;
-              m.depthWrite = false;
-              m.depthTest = true;
-              m.needsUpdate = true;
-            }
-          }
-          obj.renderOrder = 998; // In front of screen (997)
-        }
-      });
-    } else {
-      // Only log error if all selection methods failed
-      console.error("❌ Screen mesh not found (all selection methods failed)");
-    }
-
-    // Hide tint/mirror filters that block the screen (but keep camera/notch)
-    filterMeshes.forEach((filter) => {
-      const name = (filter.name ?? "").toLowerCase();
-      const matName = filter.material?.name?.toLowerCase?.() ?? "";
-      // Hide tint/mirror filters, but keep camera-related ones
-      if (name.includes("tint") || matName.includes("tint") ||
-        (name.includes("mirror") && !name.includes("camera") && !name.includes("sapphire"))) {
-        console.log("🚫 Hiding tint/mirror filter:", filter.name);
-        filter.visible = false;
-      }
-    });
-
-    // Keep notch/camera meshes visible (full opacity) - these create the cutout
-    notchMeshes.forEach((notch) => {
-      console.log("✅ Keeping notch/camera visible:", notch.name);
-      notch.visible = true;
-      // Ensure they render on top
-      if (notch.material) {
-        if (Array.isArray(notch.material)) {
-          notch.material.forEach((mat) => {
-            if (mat) {
-              mat.transparent = false;
-              mat.opacity = 1.0;
-              mat.needsUpdate = true;
-            }
-          });
-        } else {
-          notch.material.transparent = false;
-          notch.material.opacity = 1.0;
-          notch.material.needsUpdate = true;
-        }
-      }
-      notch.renderOrder = 1000; // Render last (on top)
-    });
-
-    // Handle front glass/tint/filter meshes that could block the screen
-    // If Object_54 is a cover glass, make it transparent (don't hide it - it may have bezel edges)
-    const blockerNames = [
-      "14", "53", "front", "tint", "filter", "mirror", "screencover",
-      "frontglass", "displayglass", "screen_glass", "cover"
-    ];
-    // Don't hide "display" - that's the screen we want to keep visible
-
-    glassMeshes.forEach((glass) => {
-      const name = (glass.name ?? "").toLowerCase();
-      const matName = glass.material?.name?.toLowerCase?.() ?? "";
-
-      // Check if this is a front-facing blocker (not bezel/back glass)
-      const isBlocker = blockerNames.some(blocker =>
-        name.includes(blocker) || matName.includes(blocker)
-      );
-
-      // If it's a cover glass (like Object_54 with frame material), make it transparent instead of hiding
-      const isCoverGlass = (
-        (name.includes("54") || name.includes("frame")) &&
-        (matName.includes("frame") || matName.includes("glass"))
-      );
-
-      if (isBlocker && !isCoverGlass) {
-        console.log("🚫 HIDING BLOCKER:", glass.name, "| material:", matName);
-        glass.visible = false; // Fully hide - no transparency tricks
-      } else if (isCoverGlass) {
-        // Make cover glass transparent so it doesn't block the display
-        console.log("🔧 Making cover glass transparent (non-blocking):", glass.name, "| material:", matName);
-        if (Array.isArray(glass.material)) {
-          glass.material.forEach((mat) => {
-            if (mat) {
-              mat.opacity = 0.15; // Very transparent
-              mat.transparent = true;
-              mat.depthWrite = false; // Don't write depth so display shows through
-              mat.needsUpdate = true;
-            }
-          });
-        } else {
-          glass.material.opacity = 0.15;
-          glass.material.transparent = true;
-          glass.material.depthWrite = false;
-          glass.material.needsUpdate = true;
+      if (screenArea) {
+        const a = bboxArea(m);
+        const ratio = a / (screenArea || 1);
+        if (ratio > 0.45 && ratio < 1.8) {
+          setCoverGlassLook(m);
         }
       } else {
-        // Other glass (bezel, back) - make transparent
-        if (Array.isArray(glass.material)) {
-          glass.material.forEach((mat) => {
-            if (mat) {
-              mat.opacity = 0.3;
-              mat.transparent = true;
-              mat.needsUpdate = true;
-            }
-          });
-        } else {
-          glass.material.opacity = 0.3;
-          glass.material.transparent = true;
-          glass.material.needsUpdate = true;
-        }
+        // if no screenArea, still soften glass rather than blocking everything
+        setCoverGlassLook(m);
       }
     });
 
-    // RULE A (highest priority): Find mesh with "display" in name/material
-    // Object_55 | material: display should win
-    root.traverse((obj) => {
-      if (obj.isMesh) {
-        const name = (obj.name ?? "").toLowerCase();
-        const matName = (obj.material?.name ?? "").toLowerCase();
+    // 4) Choose the "visible screen surface" = first ray hit that is NOT glass-like
+    const visibleSurface =
+      intersects.map((h) => h.object).find((obj) => obj.isMesh && !isGlassLike(obj)) || fallbackScreen;
 
-        if (name.includes("display") || matName.includes("display")) {
-          foundScreenMesh = obj;
-          console.log("✅ Selected screen mesh (display material):", obj.name, "| material:", matName || (obj.material?.name ?? "unknown"));
-        }
-      }
-    });
-
-    // RULE B (fallback): Only if no "display" mesh found, use geometry-based selection
-    if (!foundScreenMesh) {
-      console.log("⚠️ No 'display' mesh found, falling back to geometry-based selection");
-      const screenCandidates = [];
-
-      root.traverse((obj) => {
-        if (obj.isMesh) {
-          const name = (obj.name ?? "").toLowerCase();
-          const matName = (obj.material?.name ?? "").toLowerCase();
-
-          // Skip obvious blockers (glass/tint/mirror) and notch/camera
-          // Also skip frame/aluminum/plastic (never apply texture to these)
-          const isBlocker = (
-            matName.includes("glass") || name.includes("glass") ||
-            matName.includes("tint") || name.includes("tint") ||
-            matName.includes("mirror") || name.includes("mirror") ||
-            matName.includes("filter") || name.includes("filter") ||
-            name.includes("camera") || name.includes("notch") || name.includes("speaker")
-          );
-
-          const isPhonePart = (
-            matName.includes("frame") || name.includes("frame") ||
-            matName.includes("aluminum") || name.includes("aluminum") ||
-            matName.includes("plastic") || name.includes("plastic") ||
-            matName.includes("antena") || name.includes("antena")
-          );
-
-          if (isBlocker || isPhonePart) return;
-
-          // Compute geometry metrics
-          const box = new THREE.Box3().setFromObject(obj);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          const area = size.x * size.y;
-          const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
-
-          // Screen candidates: very flat and reasonably large
-          if (flat > 8 && area > 0.0001) {
-            screenCandidates.push({
-              mesh: obj,
-              name: obj.name,
-              material: matName || (obj.material?.name ?? "unknown"),
-              area: area,
-              flat: flat,
-              score: flat * area // Higher = more likely to be screen
-            });
-          }
-        }
-      });
-
-      // Sort by screen-likeness and pick the top candidate
-      screenCandidates.sort((a, b) => b.score - a.score);
-
-      console.log("🔍 SCREEN CANDIDATES (geometry-based fallback):");
-      screenCandidates.slice(0, 5).forEach((c, idx) => {
-        console.log(`  ${idx + 1}. ${c.name} | material: ${c.material} | area: ${c.area.toFixed(6)} | flat: ${c.flat.toFixed(1)} | score: ${c.score.toFixed(2)}`);
-      });
-
-      if (screenCandidates.length > 0) {
-        foundScreenMesh = screenCandidates[0].mesh;
-        console.log("✅ Selected screen mesh (geometry-based):", foundScreenMesh.name, "| material:", screenCandidates[0].material);
-      } else {
-        // Final fallback: find by name (Object_55)
-        root.traverse((obj) => {
-          if (obj.isMesh && obj.name === SCREEN_MESH_NAME_FALLBACK) {
-            foundScreenMesh = obj;
-            console.log("✅ Selected screen mesh (fallback by name):", foundScreenMesh.name);
-          }
-        });
-      }
+    if (!visibleSurface) {
+      console.error("❌ No visible screen surface could be determined (raycast + fallback failed).");
+      return;
     }
 
-    // Compute screen area from selected mesh (for relative cover detection)
-    let screenArea = 0;
-    if (foundScreenMesh) {
-      foundScreenMesh.geometry.computeBoundingBox();
-      const screenBbox = foundScreenMesh.geometry.boundingBox;
-      if (screenBbox) {
-        const screenSize = new THREE.Vector3();
-        screenBbox.getSize(screenSize);
-        screenArea = screenSize.x * screenSize.y;
-        console.log("📐 Screen area:", screenArea.toFixed(6));
-      }
+    console.log(
+      `✅ Visible screen surface selected: ${visibleSurface.name} | mat: ${visibleSurface.material?.name || visibleSurface.material?.type}`
+    );
+
+    // 5) If you want a brutal confirmation: hide everything but the chosen surface (+ notch bits)
+    if (DEBUG_SOLO_SCREEN) {
+      meshes.forEach((m) => (m.visible = false));
+      visibleSurface.visible = true;
+
+      // keep notch/camera if you want
+      meshes
+        .filter((m) => {
+          const n = meshLabel(m);
+          return n.includes("notch") || n.includes("camera") || ["object_32", "object_28", "object_41", "object_37"].includes(n);
+        })
+        .forEach((m) => (m.visible = true));
     }
 
-    // Also check ALL meshes for potential blockers (not just glass-labeled ones)
-    // This catches meshes with generic names (Object_XX) that don't match keywords
-    const flatLargeMeshes = []; // For area-based detection
+    // 6) Apply the demo material to the actual visible surface
+    setScreenMaterial(visibleSurface, demoTexture);
 
-    root.traverse((obj) => {
-      if (obj.isMesh && obj !== foundScreenMesh) {
-        const name = (obj.name ?? "").toLowerCase();
-        const matName = obj.material?.name?.toLowerCase?.() ?? "";
-
-        // Check if this looks like a front display blocker (keyword-based)
-        const looksLikeBlocker = (
-          (name.includes("mirror") && name.includes("filter")) ||
-          (name.includes("tint") && name.includes("back")) ||
-          (name.includes("front") && (name.includes("glass") || name.includes("display") || name.includes("cover"))) ||
-          (matName.includes("tint") && matName.includes("back")) ||
-          (matName.includes("mirror") && matName.includes("filter"))
-        );
-
-        if (looksLikeBlocker) {
-          console.log("🚫 HIDING ADDITIONAL BLOCKER (keyword):", obj.name, "| material:", matName);
-          obj.visible = false;
-        }
-
-        // Collect flat/large meshes for area-based detection (relative to screen)
-        // These are likely cover meshes with generic names (Object_54, Object_52, etc.)
-        const box = new THREE.Box3().setFromObject(obj);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const area = size.x * size.y;
-        const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
-
-        // RELATIVE detection: area should be 0.6x to 1.6x screen area (cover is similar size)
-        // Reduced flatness threshold (some covers have slight curvature/bevel)
-        // BUT: Don't hide frame/aluminum/plastic - those are phone parts, not blockers
-        const areaRatio = screenArea > 0 ? area / screenArea : 0;
-        const isBlockerMaterial = (
-          matName.includes("glass") || name.includes("glass") ||
-          matName.includes("tint") || name.includes("tint") ||
-          matName.includes("mirror") || name.includes("mirror") ||
-          matName.includes("filter") || name.includes("filter") ||
-          matName.includes("screencover") || name.includes("screencover") ||
-          matName.includes("frontglass") || name.includes("frontglass") ||
-          matName.includes("displayglass") || name.includes("displayglass")
-        );
-        const isPhonePart = (
-          matName.includes("frame") || name.includes("frame") ||
-          matName.includes("aluminum") || name.includes("aluminum") ||
-          matName.includes("plastic") || name.includes("plastic") ||
-          matName.includes("antena") || name.includes("antena")
-        );
-
-        const isCoverCandidate = (
-          flat > 8 && // Reduced from 15 (more forgiving for slight curvature)
-          areaRatio >= 0.6 && // At least 60% of screen area
-          areaRatio <= 1.6 && // At most 160% of screen area (slightly larger is OK)
-          isBlockerMaterial && // Only hide actual blockers (glass/tint/mirror)
-          !isPhonePart && // Don't hide phone parts (frame/aluminum/plastic)
-          obj !== foundScreenMesh
-        );
-
-        if (isCoverCandidate) {
-          flatLargeMeshes.push({
-            mesh: obj,
-            name: obj.name,
-            material: matName || (obj.material?.name ?? "unknown"),
-            area: area,
-            areaRatio: areaRatio,
-            flat: flat,
-            score: flat * areaRatio // Higher = more likely to be cover
-          });
-        }
-      }
-    });
-
-    // Sort by "screen-likeness" (flat × area ratio) and hide the top candidates
-    // These are likely cover meshes sitting in front of Object_55
-    flatLargeMeshes.sort((a, b) => b.score - a.score);
-
-    console.log("🔍 FLAT/LARGE MESHES (potential cover blockers, relative to Object_55):");
-    if (flatLargeMeshes.length === 0) {
-      console.log("  ⚠️ No candidates found. Check thresholds or screen area calculation.");
-    } else {
-      flatLargeMeshes.slice(0, 10).forEach((m, idx) => {
-        console.log(`  ${idx + 1}. ${m.name} | material: ${m.material} | area: ${m.area.toFixed(6)} | areaRatio: ${m.areaRatio.toFixed(2)}x | flat: ${m.flat.toFixed(1)} | score: ${m.score.toFixed(2)}`);
-      });
+    // if the fallback screen is different, don't let it fight for pixels
+    if (fallbackScreen && fallbackScreen !== visibleSurface) {
+      fallbackScreen.renderOrder = 996;
     }
-
-    // Hide the top 3-5 flat/large meshes (these are likely cover meshes)
-    // Skip the selected screen mesh
-    const coverCandidates = flatLargeMeshes
-      .filter(m => m.mesh !== foundScreenMesh)
-      .slice(0, 5); // Top 5 candidates
-
-    coverCandidates.forEach((candidate) => {
-      console.log("🚫 HIDING COVER CANDIDATE (flat/area):", candidate.name, "| material:", candidate.material, "| areaRatio:", candidate.areaRatio.toFixed(2) + "x");
-      candidate.mesh.visible = false;
-    });
-
-    // Hide holder/stand meshes
-    const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
-    root.traverse((obj) => {
-      if (obj.isMesh) {
-        const name = (obj.name ?? "").toLowerCase();
-        const matName = obj.material?.name?.toLowerCase?.() ?? "";
-        if (holderNames.some((h) => name.includes(h) || matName.includes(h))) {
-          obj.visible = false;
-        }
-      }
-    });
 
     onLoaded?.();
-  }, [root, screenTex, onLoaded]);
+  }, [scene, camera, demoTexture, onLoaded]);
 
   return (
-    <group>
-      {/* Original iPhone model with texture applied directly to screen mesh */}
-      <primitive object={root} scale={heroScale} />
+    <group ref={group} scale={heroScale}>
+      <primitive object={scene} />
     </group>
   );
 }
