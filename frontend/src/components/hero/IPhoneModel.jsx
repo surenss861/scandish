@@ -219,13 +219,6 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     tex.needsUpdate = true;
   }
 
-  // Make sure texture updates every frame
-  useEffect(() => {
-    if (tex) {
-      tex.needsUpdate = true;
-    }
-  });
-
   // Auto-fit + find screen mesh + apply texture
   useEffect(() => {
     if (!scene) return;
