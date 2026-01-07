@@ -5,26 +5,44 @@ import * as THREE from "three";
 
 export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) {
   const group = useRef(null);
+  const sceneRef = useRef(null);
   
   console.log("🔵 IPhoneModel component rendering, loading:", url);
   
   // Load the GLB model
   const { scene } = useGLTF(url);
   
+  // Auto-fit model to target size
   useEffect(() => {
-    if (scene && onLoaded) {
+    if (!scene) return;
+    
+    sceneRef.current = scene.clone(); // Clone to avoid mutating the original
+    
+    // Auto-fit model to a target height
+    const box = new THREE.Box3().setFromObject(sceneRef.current);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    
+    console.log("📐 Model bounding box:", { 
+      size: { x: size.x.toFixed(3), y: size.y.toFixed(3), z: size.z.toFixed(3) },
+      center: { x: center.x.toFixed(3), y: center.y.toFixed(3), z: center.z.toFixed(3) }
+    });
+    
+    // Center it
+    sceneRef.current.position.sub(center);
+    
+    // Scale it (target height in "three units")
+    const targetHeight = 1.6;
+    const scaleFactor = targetHeight / size.y;
+    sceneRef.current.scale.setScalar(scaleFactor);
+    
+    console.log("✅ Auto-scaled model:", { scaleFactor: scaleFactor.toFixed(3), targetHeight });
+    
+    if (onLoaded) {
       onLoaded();
-      console.log("✅ GLB model loaded successfully:", url);
-      console.log("📦 Scene children count:", scene.children.length);
-      
-      // Log bounding box to understand model size
-      const box = new THREE.Box3().setFromObject(scene);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-      console.log("📐 Model bounding box:", { 
-        size: { x: size.x.toFixed(3), y: size.y.toFixed(3), z: size.z.toFixed(3) },
-        center: { x: center.x.toFixed(3), y: center.y.toFixed(3), z: center.z.toFixed(3) }
-      });
+      console.log("✅ GLB model loaded and auto-fitted successfully:", url);
     }
   }, [scene, url, onLoaded]);
 
@@ -86,7 +104,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
   screenTex.colorSpace = THREE.SRGBColorSpace;
 
   useEffect(() => {
-    if (!scene) {
+    if (!sceneRef.current) {
       console.error("❌ Scene is null, cannot apply screen texture");
       return;
     }
@@ -94,7 +112,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
 
     // Based on GLTF: Screen_14 node contains Display material (material index 14)
-    const screenNode = scene.getObjectByName("Screen_14");
+    const screenNode = sceneRef.current.getObjectByName("Screen_14");
     let screenFound = false;
     
     if (screenNode) {
@@ -116,7 +134,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
 
     // Also try direct material name search
     if (!screenFound) {
-      scene.traverse((obj) => {
+      sceneRef.current.traverse((obj) => {
         if (obj.isMesh && obj.material) {
           const name = obj.name || "unnamed";
           const matName = obj.material.name || "no material";
@@ -134,7 +152,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     }
 
     // Enhance other materials
-    scene.traverse((obj) => {
+    sceneRef.current.traverse((obj) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
@@ -144,7 +162,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
         }
       }
     });
-  }, [scene, screenTex]);
+  }, [screenTex]);
 
   useFrame((state) => {
     if (!group.current) return;
@@ -153,11 +171,13 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
 
-  // Device mock positioning - adjust scale and position for nice fit
+  // Auto-fitted model - simple positioning
+  if (!sceneRef.current) return null;
+  
   return (
-    <group ref={group} position={[0.9, -0.35, 0]} scale={1.35}>
-      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
-        <primitive object={scene} />
+    <group ref={group} position={[0, -0.2, 0]}>
+      <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.22}>
+        <primitive object={sceneRef.current} />
       </Float>
     </group>
   );

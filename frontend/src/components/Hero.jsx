@@ -107,13 +107,16 @@ export default function Hero() {
             </div>
 
             {/* Desktop: 3D iPhone */}
-            <div className="relative hidden lg:block h-[520px] w-full">
+            <div className="relative hidden lg:block h-[460px] w-full">
               {/* Click overlay */}
               <Link
                 to="/menu/demo"
                 className="absolute inset-0 z-20 rounded-[2.5rem]"
                 aria-label="Open live demo menu"
               />
+
+              {/* Subtle spotlight behind phone */}
+              <div className="absolute inset-0 z-0 rounded-[2.5rem] bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
 
               {/* 3D iPhone */}
               <div className="absolute inset-0 z-10 pointer-events-none">

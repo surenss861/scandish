@@ -26,7 +26,7 @@ export default function HeroShowcase3D() {
     <div className="w-full h-full">
       <Canvas
         dpr={[1, 1.5]}
-        camera={{ position: [0, 0.1, 2.6], fov: 40 }}
+        camera={{ position: [0, 0.05, 1.6], fov: 35 }}
         gl={{ 
           antialias: true, 
           powerPreference: "high-performance", 
