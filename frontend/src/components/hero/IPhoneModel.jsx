@@ -154,7 +154,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
       foundScreenMesh.material.needsUpdate = true;
       foundScreenMesh.visible = true; // Keep it visible!
-      
+
       // Set render order and depth settings for Object_55 (screen)
       foundScreenMesh.renderOrder = 997; // Render before cover glass
       foundScreenMesh.frustumCulled = false;
@@ -181,12 +181,12 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       }
 
       console.log("✅ Applied texture to original screen mesh");
-      
+
       // Make Object_54 (front cover) transparent and non-blocking
       const DEBUG_HIDE_OBJECT54 = false; // Set to true to test if Object_54 is the blocker
       root.traverse((obj) => {
         if (!obj.isMesh) return;
-        
+
         // Force Object_54 to behave like transparent cover glass (not opaque blocker)
         if (obj.name === "Object_54") {
           if (DEBUG_HIDE_OBJECT54) {
@@ -194,7 +194,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
             obj.visible = false;
             return;
           }
-          
+
           console.log("🔧 Making Object_54 transparent (non-blocking cover glass)");
           const m = obj.material;
           if (m) {

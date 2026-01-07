@@ -15,12 +15,20 @@ export function usePhoneDemoTexture() {
   const ctxRef = useRef(null);
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(canvas);
-    t.colorSpace = THREE.SRGBColorSpace; // Critical: sRGB for proper whites
+    // Color space handling (three.js r152+)
+    if ("colorSpace" in t) {
+      t.colorSpace = THREE.SRGBColorSpace;
+    }
+    // Fallback for older three.js versions
+    if ("encoding" in t) {
+      t.encoding = THREE.sRGBEncoding;
+    }
     t.anisotropy = 8;
-    t.flipY = false;
+    t.flipY = false; // GLTF meshes expect flipY = false
     t.generateMipmaps = false; // No mipmaps for crisp text
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
+    t.needsUpdate = true;
     return t;
   }, [canvas]);
 
