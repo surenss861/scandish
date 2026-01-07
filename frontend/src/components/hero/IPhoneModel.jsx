@@ -57,6 +57,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const { scene } = useGLTF("/models/scandish.glb");
   const screenTex = usePhoneDemoTexture();
   const screenPlaneRef = useRef(null);
+  const screenBloomRef = useRef(null);
   const screenAnchorRef = useRef(null);
   const screenMeshRef = useRef(null);
 
@@ -228,7 +229,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
     // Z offset for safety (z-fighting)
     screenPlaneRef.current.position.set(0, 0, 0.012);
-    
+
     // Also update bloom plane geometry (slightly larger) - set after plane is ready
     if (screenBloomRef.current && screenPlaneRef.current.geometry) {
       screenBloomRef.current.geometry.dispose();
