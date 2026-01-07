@@ -165,7 +165,7 @@ export function usePhoneDemoTexture() {
       if (step === "live") {
         // Toast
         ctx.fillStyle = "rgba(30,122,74,0.25)";
-        roundRect(ctx, 120, 1400, canvas.width - 240, 190, 54);
+        roundRect(ctx, 120, 1400, W - 240, 190, 54);
         ctx.fill();
 
         ctx.fillStyle = "#F3F5F4";
