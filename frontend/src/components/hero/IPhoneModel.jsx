@@ -50,10 +50,10 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           !notchMeshes.includes(obj)) {
           filterMeshes.push(obj);
         }
-        
+
         // Diagnostic: collect all potential blockers (flat, large area, front-facing)
         const blockerKeywords = ["14", "53", "front", "tint", "filter", "mirror", "display", "cover", "glass"];
-        const isPotentialBlocker = blockerKeywords.some(kw => 
+        const isPotentialBlocker = blockerKeywords.some(kw =>
           objName.includes(kw) || matName.includes(kw)
         );
         if (isPotentialBlocker && obj !== foundScreenMesh) {
@@ -74,7 +74,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         }
       }
     });
-    
+
     // Log all potential blockers for diagnostics
     if (allPotentialBlockers.length > 0) {
       console.log("🔍 POTENTIAL BLOCKERS FOUND:");
@@ -86,6 +86,25 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     // ✅ Apply texture directly to original screen mesh (no replacement plane)
     if (foundScreenMesh) {
       console.log("✅ Found screen mesh:", foundScreenMesh.name);
+
+      // TEMPORARY: Make Object_55 neon to prove it's visible
+      // If screen doesn't turn neon, something else is covering it
+      const NEON_TEST = false; // Set to true to test
+      if (NEON_TEST) {
+        const neonMat = new THREE.MeshBasicMaterial({
+          color: new THREE.Color(0x00ff00), // Bright green
+          toneMapped: false,
+        });
+        if (Array.isArray(foundScreenMesh.material)) {
+          foundScreenMesh.material = foundScreenMesh.material.map(() => neonMat);
+        } else {
+          foundScreenMesh.material = neonMat;
+        }
+        foundScreenMesh.material.needsUpdate = true;
+        foundScreenMesh.visible = true;
+        console.log("🧪 NEON TEST: Object_55 should be bright green. If not, it's covered.");
+        return; // Exit early during test
+      }
 
       // Configure texture for GLTF mesh (flipY = false for GLTF)
       screenTex.flipY = false; // GLTF UVs expect flipY = false
@@ -193,12 +212,15 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     });
 
     // Also check ALL meshes for potential blockers (not just glass-labeled ones)
+    // This catches meshes with generic names (Object_XX) that don't match keywords
+    const flatLargeMeshes = []; // For area-based detection
+    
     root.traverse((obj) => {
       if (obj.isMesh && obj !== foundScreenMesh) {
         const name = (obj.name ?? "").toLowerCase();
         const matName = obj.material?.name?.toLowerCase?.() ?? "";
-
-        // Check if this looks like a front display blocker
+        
+        // Check if this looks like a front display blocker (keyword-based)
         const looksLikeBlocker = (
           (name.includes("mirror") && name.includes("filter")) ||
           (name.includes("tint") && name.includes("back")) ||
@@ -206,12 +228,52 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           (matName.includes("tint") && matName.includes("back")) ||
           (matName.includes("mirror") && matName.includes("filter"))
         );
-
+        
         if (looksLikeBlocker) {
-          console.log("🚫 HIDING ADDITIONAL BLOCKER:", obj.name, "| material:", matName);
+          console.log("🚫 HIDING ADDITIONAL BLOCKER (keyword):", obj.name, "| material:", matName);
           obj.visible = false;
         }
+        
+        // Also collect flat/large meshes for area-based detection
+        // These are likely cover meshes with generic names (Object_54, Object_52, etc.)
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const area = size.x * size.y;
+        const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
+        
+        // If it's very flat and large (like a screen cover), it's a candidate
+        if (flat > 15 && area > 0.2 && obj !== foundScreenMesh) {
+          flatLargeMeshes.push({
+            mesh: obj,
+            name: obj.name,
+            material: matName || (obj.material?.name ?? "unknown"),
+            area: area,
+            flat: flat,
+            score: flat * area // Higher = more likely to be cover
+          });
+        }
       }
+    });
+    
+    // Sort by "screen-likeness" (flat × area) and hide the top candidates
+    // These are likely cover meshes sitting in front of Object_55
+    flatLargeMeshes.sort((a, b) => b.score - a.score);
+    
+    console.log("🔍 FLAT/LARGE MESHES (potential cover blockers):");
+    flatLargeMeshes.slice(0, 10).forEach((m, idx) => {
+      console.log(`  ${idx + 1}. ${m.name} | material: ${m.material} | area: ${m.area.toFixed(3)} | flat: ${m.flat.toFixed(1)} | score: ${m.score.toFixed(2)}`);
+    });
+    
+    // Hide the top 3-5 flat/large meshes (these are likely cover meshes)
+    // Object_55 should be in this list but we skip it
+    const coverCandidates = flatLargeMeshes
+      .filter(m => m.mesh.name !== SCREEN_MESH_NAME)
+      .slice(0, 5); // Top 5 candidates
+    
+    coverCandidates.forEach((candidate) => {
+      console.log("🚫 HIDING COVER CANDIDATE (flat/area):", candidate.name, "| material:", candidate.material);
+      candidate.mesh.visible = false;
     });
 
     // Hide holder/stand meshes
