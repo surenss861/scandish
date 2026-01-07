@@ -2,87 +2,65 @@ import { Suspense, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import { ContactShadows } from "@react-three/drei";
 import IPhoneModel from "./IPhoneModel.jsx";
-import * as THREE from "three";
-
-// HUGE visible test mesh
-function TestMesh() {
-  return (
-    <>
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[2, 4, 0.2]} />
-        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={1} />
-      </mesh>
-      <mesh position={[2, 0, 0]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={1} />
-      </mesh>
-    </>
-  );
-}
 
 export default function HeroShowcase3D() {
   const [canvasReady, setCanvasReady] = useState(false);
-  const [error, setError] = useState(null);
+  const [modelReady, setModelReady] = useState(false);
 
   useEffect(() => {
     console.log("🚀 HeroShowcase3D component mounted");
   }, []);
 
-  console.log("✅ FORCING 3D RENDER - NO RESTRICTIONS");
-
   return (
     <div 
-      className="absolute inset-0 -z-10" 
+      className="absolute inset-0 -z-10 pointer-events-none"
       style={{ 
-        backgroundColor: 'rgba(255, 0, 0, 0.1)', // Red tint to see canvas area
-        border: '4px solid #00ff00', // Bright green border
         minHeight: '500px',
         minWidth: '500px'
       }}
     >
       <Canvas
         dpr={[1, 1.5]}
-        camera={{ position: [0, 0, 5], fov: 50 }}
+        camera={{ position: [0, 0.2, 3.2], fov: 40 }}
         gl={{ 
           antialias: true, 
           powerPreference: "high-performance", 
-          alpha: false, // Opaque background
+          alpha: true,
           preserveDrawingBuffer: true
         }}
-        shadows={false}
+        shadows
         onCreated={(state) => {
           console.log("🎨 Canvas created successfully!", state);
-          console.log("📐 Canvas size:", state.size);
           setCanvasReady(true);
         }}
         onError={(error) => {
           console.error("❌ Canvas error:", error);
-          setError(error.message);
         }}
       >
-        <ambientLight intensity={1} />
-        <directionalLight position={[5, 5, 5]} intensity={1} />
-
-        {/* ALWAYS VISIBLE TEST MESHES */}
-        <TestMesh />
+        <ambientLight intensity={0.7} />
+        <directionalLight position={[3, 4, 2]} intensity={1.2} castShadow />
+        <pointLight position={[-3, -3, 3]} intensity={0.5} color="#1E7A4A" />
 
         <Suspense 
-          fallback={
-            <mesh position={[0, 2, 0]}>
-              <boxGeometry args={[1, 1, 1]} />
-              <meshStandardMaterial color="#0000ff" emissive="#0000ff" emissiveIntensity={1} />
-            </mesh>
-          }
+          fallback={null}
         >
-          <IPhoneModel />
+          <IPhoneModel onLoaded={() => setModelReady(true)} />
         </Suspense>
+
+        <ContactShadows
+          position={[0, -1.15, 0]}
+          opacity={0.35}
+          blur={2.2}
+          scale={8}
+        />
       </Canvas>
       
-      {/* Debug overlay - ALWAYS VISIBLE */}
-      <div className="absolute top-4 left-4 bg-red-500 text-white px-4 py-2 rounded text-sm font-bold z-[9999]">
-        Canvas: {canvasReady ? "READY ✓" : "LOADING..."}
-        {error && <div className="text-xs mt-1">Error: {error}</div>}
-      </div>
+      {/* Debug overlay - only in dev */}
+      {import.meta.env.DEV && canvasReady && (
+        <div className="absolute top-4 left-4 bg-[#1E7A4A] text-[#F3F5F4] px-3 py-1 rounded text-xs font-bold z-[9999] pointer-events-auto">
+          Canvas: {canvasReady ? "READY" : "LOADING"} {modelReady ? "| Model: READY" : "| Model: LOADING..."}
+        </div>
+      )}
     </div>
   );
 }

@@ -20,13 +20,13 @@ export default function Hero() {
       ref={pinRef}
       className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden min-h-screen"
     >
-      {/* 3D iPhone Model - MOVED TO TOP, HIGHER Z-INDEX */}
-      <div data-phone-3d className="absolute inset-0 z-0">
+      {/* 3D iPhone Model - BEHIND everything */}
+      <div data-phone-3d className="absolute inset-0 -z-10">
         <HeroShowcase3D />
       </div>
 
-      {/* Green/Black Tint Overlays - LOWER OPACITY SO WE CAN SEE 3D */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/30 via-[#0B0F0E]/20 to-[#0B0F0E]/40 z-[1]" />
+      {/* Green/Black Tint Overlays */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-[#0B0F0E]/35 to-[#0B0F0E]/70 z-0" />
       <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[#1E7A4A]/10 blur-[120px] z-[1]" />
 
       <div className="relative max-w-7xl mx-auto z-10">
