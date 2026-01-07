@@ -278,16 +278,26 @@ export default function IPhoneModel({
   }
 
   // Find screen mesh once and replace its material with MeshBasicMaterial
+  // Also hide/remove any holder/stand/base meshes
   useEffect(() => {
     if (!scene) return;
 
     console.log("📱 iPhoneModel mounted, finding screen mesh…");
 
     let found = null;
+    const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
+    
     scene.traverse((obj) => {
       if (!obj?.isMesh) return;
       const matName = obj.material?.name?.toLowerCase?.() ?? "";
       const name = (obj.name ?? "").toLowerCase();
+
+      // Hide holder/stand meshes
+      if (holderNames.some(h => name.includes(h) || matName.includes(h))) {
+        obj.visible = false;
+        console.log("🚫 Hiding holder/stand mesh:", obj.name);
+        return;
+      }
 
       // Your model: Object_55 material "Display"
       if (matName.includes("display") || name.includes("screen") || name.includes("display")) {
@@ -315,9 +325,9 @@ export default function IPhoneModel({
     });
     found.material.needsUpdate = true;
 
-    // nicer shadows on rest
+    // nicer shadows on rest (but not holders)
     scene.traverse((o) => {
-      if (o.isMesh) {
+      if (o.isMesh && o.visible) {
         o.castShadow = true;
         o.receiveShadow = true;
       }
