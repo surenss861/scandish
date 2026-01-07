@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import QrPreview from "./QrPreview.jsx";
-import { HeroCanvas } from "./HeroCanvas.jsx";
+import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
 import { useHeroParallax } from "../hooks/useHeroParallax.js";
 
 export default function Hero() {
@@ -20,10 +20,14 @@ export default function Hero() {
       ref={parallaxRef}
       className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden"
     >
-      {/* 3D Background */}
-      <HeroCanvas />
+      {/* 3D iPhone Model */}
+      <HeroShowcase3D />
 
-      <div className="relative max-w-7xl mx-auto">
+      {/* Green/Black Tint Overlays */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/55 via-[#0B0F0E]/35 to-[#0B0F0E]/70 z-0" />
+      <div className="pointer-events-none absolute -top-32 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-[#1E7A4A]/10 blur-[120px] z-0" />
+
+      <div className="relative max-w-7xl mx-auto z-10">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           {/* Left: Content */}
           <motion.div
@@ -32,12 +36,16 @@ export default function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
+            <p className="text-sm text-[#1E7A4A]/90 mb-2 font-medium">
+              Scandish • QR Menus
+            </p>
             <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6 text-[#F3F5F4]">
               Instant QR menus that{" "}
               <span className="text-[#1E7A4A]">update in seconds</span>
             </h1>
             <p className="text-xl text-[#A6B0AA] mb-8 leading-relaxed">
-              No PDFs. No designers. Edit once — your QR stays the same.
+              Replace PDF menus with a clean mobile experience. Edit anytime —
+              your QR code stays the same.
             </p>
 
             {/* Value Props */}
@@ -79,7 +87,7 @@ export default function Hero() {
             </p>
           </motion.div>
 
-          {/* Right: Interactive Demo */}
+          {/* Right: Interactive Demo (Desktop) or 3D iPhone placeholder (Mobile) */}
           <motion.div
             data-parallax
             initial={{ opacity: 0, x: 20 }}
@@ -87,8 +95,16 @@ export default function Hero() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="relative"
           >
-            {/* Phone Frame with Menu Preview */}
-            <div className="relative bg-[#101614] border-2 border-[#1B2420] rounded-[2rem] p-4 shadow-2xl">
+            {/* On mobile, show a simple placeholder since 3D is disabled */}
+            <div className="lg:hidden flex items-center justify-center h-[400px]">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📱</div>
+                <p className="text-[#A6B0AA]">View on desktop for 3D preview</p>
+              </div>
+            </div>
+            
+            {/* Phone Frame with Menu Preview (Desktop only) */}
+            <div className="relative hidden lg:block bg-[#101614] border-2 border-[#1B2420] rounded-[2rem] p-4 shadow-2xl">
               <div className="bg-[#0B0F0E] rounded-[1.5rem] overflow-hidden">
                 {/* Phone Header */}
                 <div className="bg-[#101614] border-b border-[#1B2420] px-4 py-3">
