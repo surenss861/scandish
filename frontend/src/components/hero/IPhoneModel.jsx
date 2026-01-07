@@ -9,13 +9,13 @@ const SCREEN_MESH_NAME = "Object_55";
 function applyTextureToMesh(mesh, tex) {
   tex.flipY = false;
   tex.needsUpdate = true;
-  
+
   // Ensure texture fits the screen mesh properly
   // Get the mesh bounding box to calculate proper UV mapping
   const box = new THREE.Box3().setFromObject(mesh);
   const size = new THREE.Vector3();
   box.getSize(size);
-  
+
   // Set texture to repeat/offset if needed to fit screen
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
