@@ -1,22 +1,122 @@
-import { useRef } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Float, useGLTF } from "@react-three/drei";
+import * as THREE from "three";
 
 export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   const group = useRef(null);
   const { scene } = useGLTF(url);
+  const [screenTexture, setScreenTexture] = useState(null);
 
-  // Make materials look premium
-  scene.traverse((obj) => {
-    if (obj.isMesh) {
-      obj.castShadow = true;
-      obj.receiveShadow = true;
-      if (obj.material) {
-        obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
-        obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
+  // Create screen texture (menu preview)
+  useEffect(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1170; // iPhone 17 Pro screen resolution
+    canvas.height = 2532;
+    const ctx = canvas.getContext("2d");
+    
+    // Draw menu preview
+    // Background
+    ctx.fillStyle = "#0B0F0E";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Header bar
+    ctx.fillStyle = "#101614";
+    ctx.fillRect(0, 0, canvas.width, 120);
+    
+    // Restaurant name
+    ctx.fillStyle = "#F3F5F4";
+    ctx.font = "bold 70px Inter, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Demo Restaurant", canvas.width / 2, 75);
+    
+    // Menu items
+    let yPos = 250;
+    const items = [
+      { name: "Margherita Pizza", price: "$16.99" },
+      { name: "Caesar Salad", price: "$12.99" },
+      { name: "Pasta Carbonara", price: "$18.99" },
+    ];
+    
+    items.forEach((item) => {
+      // Item name
+      ctx.fillStyle = "#F3F5F4";
+      ctx.font = "50px Inter, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(item.name, 80, yPos);
+      
+      // Price
+      ctx.fillStyle = "#1E7A4A";
+      ctx.textAlign = "right";
+      ctx.fillText(item.price, canvas.width - 80, yPos);
+      
+      yPos += 120;
+    });
+    
+    // Create texture
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.flipY = false;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    setScreenTexture(texture);
+  }, []);
+
+  // Debug: Log all mesh names (check console to identify screen mesh)
+  useMemo(() => {
+    const names = [];
+    scene.traverse((obj) => {
+      if (obj.isMesh) {
+        names.push(`${obj.name || "unnamed"} | mat: ${obj.material?.name || "no material"}`);
       }
-    }
-  });
+    });
+    console.log("📱 iPhone GLB meshes:", names);
+  }, [scene]);
+
+  // Apply screen texture to screen mesh
+  useMemo(() => {
+    if (!screenTexture) return;
+
+    scene.traverse((obj) => {
+      if (!obj.isMesh) return;
+
+      const name = (obj.name || "").toLowerCase();
+      const matName = (obj.material?.name || "").toLowerCase();
+
+      // Check for screen-related names (common patterns)
+      const isScreen =
+        name.includes("screen") ||
+        name.includes("display") ||
+        name.includes("glass") ||
+        name.includes("front") ||
+        name.includes("lcd") ||
+        name.includes("panel") ||
+        matName.includes("screen") ||
+        matName.includes("display") ||
+        matName.includes("emissive") ||
+        matName.includes("lcd");
+
+      if (isScreen) {
+        console.log("✅ Found screen mesh:", name, "| material:", matName);
+        
+        // Create new material with screen texture
+        obj.material = new THREE.MeshStandardMaterial({
+          map: screenTexture,
+          emissive: new THREE.Color("#ffffff"),
+          emissiveIntensity: 0.85,
+          metalness: 0.0,
+          roughness: 0.35,
+        });
+        obj.material.needsUpdate = true;
+      } else {
+        // For non-screen meshes, enhance materials
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        if (obj.material) {
+          obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
+          obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
+        }
+      }
+    });
+  }, [scene, screenTexture]);
 
   useFrame((state) => {
     if (!group.current) return;
@@ -36,4 +136,3 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
 
 // Preload the model
 useGLTF.preload("/models/iphone17-pro.glb");
-
