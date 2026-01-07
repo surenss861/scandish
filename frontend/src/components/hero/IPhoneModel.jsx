@@ -21,7 +21,12 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
       const box = new THREE.Box3().setFromObject(scene);
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
-      console.log("📐 Model bounding box:", { size, center });
+      console.log("📐 Model bounding box:", { 
+        size: { x: size.x, y: size.y, z: size.z },
+        center: { x: center.x, y: center.y, z: center.z },
+        min: { x: box.min.x, y: box.min.y, z: box.min.z },
+        max: { x: box.max.x, y: box.max.y, z: box.max.z }
+      });
     }
   }, [scene, url, onLoaded]);
 
@@ -72,7 +77,6 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
 
     // Based on GLTF: Screen_14 node contains Display material (material index 14)
-    // Try to find by node name first
     const screenNode = scene.getObjectByName("Screen_14");
     let screenFound = false;
     
@@ -100,7 +104,6 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
           const name = obj.name || "unnamed";
           const matName = obj.material.name || "no material";
           
-          // Check for Display material (from GLTF: material index 14 is "Display")
           if (matName.toLowerCase().includes("display")) {
             console.log(`✅ Found display mesh: "${name}" | material: "${matName}"`);
             obj.material.map = screenTex;
@@ -113,30 +116,14 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
       });
     }
 
-    if (!screenFound) {
-      console.warn("⚠️ No display mesh found. Logging all meshes:");
-      const names = [];
-      scene.traverse((obj) => {
-        if (obj.isMesh) {
-          const name = obj.name || "unnamed";
-          const matName = obj.material?.name || "no material";
-          names.push({ name, matName });
-        }
-      });
-      console.table(names);
-    }
-
     // Enhance other materials
     scene.traverse((obj) => {
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
-        if (obj.material) {
-          // Don't override display material
-          if (!obj.material.name?.toLowerCase().includes("display")) {
-            obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
-            obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
-          }
+        if (obj.material && !obj.material.name?.toLowerCase().includes("display")) {
+          obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
+          obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
         }
       }
     });
@@ -149,15 +136,22 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
 
-  // Calculate scale based on model size (model is ~0.07 units tall, scale to ~2 units)
-  const scale = 30; // Much larger scale to make it visible
-
+  // Model is ~0.15 units tall, scale to ~3-4 units visible
+  // Position it in front of camera
   return (
-    <group ref={group} position={[0, 0, 0]} scale={scale}>
-      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
-        <primitive object={scene} />
-      </Float>
-    </group>
+    <>
+      {/* DEBUG: Always visible test mesh */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[1, 2, 0.1]} />
+        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={1} />
+      </mesh>
+      
+      <group ref={group} position={[0, 0, 0]} scale={25} rotation={[0, 0, 0]}>
+        <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
+          <primitive object={scene} />
+        </Float>
+      </group>
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 import { Suspense, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { ContactShadows } from "@react-three/drei";
 import IPhoneModel from "./IPhoneModel.jsx";
 
 export default function HeroShowcase3D() {
@@ -21,27 +21,28 @@ export default function HeroShowcase3D() {
     >
       <Canvas
         dpr={[1, 1.5]}
-        camera={{ position: [0, 0, 4], fov: 50 }}
+        camera={{ position: [0, 0, 5], fov: 60 }}
         gl={{ 
           antialias: true, 
           powerPreference: "high-performance", 
           alpha: true,
           preserveDrawingBuffer: true
         }}
-        shadows
+        shadows={false}
         onCreated={(state) => {
           console.log("🎨 Canvas created successfully!", state);
           console.log("📐 Canvas size:", state.size);
+          console.log("📷 Camera position:", state.camera.position);
           setCanvasReady(true);
         }}
         onError={(error) => {
           console.error("❌ Canvas error:", error);
         }}
       >
-        <ambientLight intensity={0.8} />
-        <directionalLight position={[5, 5, 5]} intensity={1.5} castShadow />
-        <pointLight position={[-5, 5, 5]} intensity={0.5} />
-        <pointLight position={[0, -5, 5]} intensity={0.3} color="#1E7A4A" />
+        <ambientLight intensity={1} />
+        <directionalLight position={[5, 5, 5]} intensity={2} />
+        <pointLight position={[-5, 5, 5]} intensity={1} />
+        <pointLight position={[0, -5, 5]} intensity={0.5} color="#1E7A4A" />
 
         <Suspense 
           fallback={null}
@@ -50,10 +51,10 @@ export default function HeroShowcase3D() {
         </Suspense>
 
         <ContactShadows
-          position={[0, -1.5, 0]}
+          position={[0, -2, 0]}
           opacity={0.4}
           blur={2}
-          scale={10}
+          scale={15}
         />
       </Canvas>
       
