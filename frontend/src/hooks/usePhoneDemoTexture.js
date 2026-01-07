@@ -167,6 +167,35 @@ export function usePhoneDemoTexture() {
       const padTop = Math.round(H * 0.09);
       const padBottom = Math.round(H * 0.08);
 
+      // --- iOS status bar ---
+      const sbY = Math.round(H * 0.045);
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.font = "700 44px Inter, system-ui";
+      ctx.textAlign = "left";
+      ctx.fillText("9:41", padX, sbY);
+
+      // wifi bars
+      const wifiX = W - padX - 260;
+      const barY = sbY - 26;
+      for (let i = 0; i < 4; i++) {
+        const bh = 12 + i * 10;
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        roundRect(ctx, wifiX + i * 18, barY + (48 - bh), 10, bh, 5);
+        ctx.fill();
+      }
+
+      // battery
+      const bx = W - padX - 110;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 4;
+      roundRect(ctx, bx, barY + 10, 86, 34, 10);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      roundRect(ctx, bx + 6, barY + 16, 62, 22, 8);
+      ctx.fill();
+      ctx.restore();
+
       // Header row
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.font = "900 70px Inter, system-ui";
@@ -178,17 +207,29 @@ export function usePhoneDemoTexture() {
       ctx.font = "600 42px Inter, system-ui";
       ctx.fillText("Menu Editor", padX, padTop + 105);
 
-      // Status pill right
-      if (step === "live") {
-        // glow
-        ctx.save();
-        ctx.shadowColor = "rgba(30,122,74,0.8)";
-        ctx.shadowBlur = 40;
-        pill(ctx, W - padX - 220, padTop + 15, 220, 80, 40, "#1E7A4A", "LIVE");
-        ctx.restore();
-      } else {
-        pill(ctx, W - padX - 240, padTop + 15, 240, 80, 40, "rgba(255,255,255,0.08)", "Preview", "rgba(255,255,255,0.75)", "700 36px Inter, system-ui");
-      }
+      // --- Live toggle (premium affordance) ---
+      const toggleX = W - padX - 260;
+      const toggleY = padTop + 15;
+      glassCard(ctx, toggleX, toggleY, 260, 86, 44, "rgba(255,255,255,0.06)", "rgba(255,255,255,0.10)");
+
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.font = "700 34px Inter, system-ui";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText("Live", toggleX + 30, toggleY + 43);
+
+      // switch
+      const swX = toggleX + 150;
+      const swY = toggleY + 24;
+      const isLive = step === "live";
+      ctx.fillStyle = isLive ? "rgba(30,122,74,0.95)" : "rgba(255,255,255,0.14)";
+      roundRect(ctx, swX, swY, 84, 40, 22);
+      ctx.fill();
+      ctx.fillStyle = "#EFFFF6";
+      ctx.beginPath();
+      ctx.arc(swX + (isLive ? 62 : 22), swY + 20, 16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.textAlign = "left";
 
       // Hero dish card with "photo" strip
       const cardX = padX;

@@ -188,23 +188,52 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       console.warn("⚠️ Screen mesh has no bounding box");
       return;
     }
-    
+
     const size = new THREE.Vector3();
     bbox.getSize(size);
 
-    // ✅ Overscan a hair so it fills edge-to-edge (tweak between 1.00 and 1.03 if needed)
-    const overscan = 1.015;
-    const planeWidth = size.x * overscan;
-    const planeHeight = size.y * overscan;
+    // ✅ Perfect fit: match texture aspect ratio to screen bounds (no letterbox, no overspill)
+    const texW = screenTex.image?.width ?? 1170;
+    const texH = screenTex.image?.height ?? 2532;
+    const texAspect = texW / texH;
+
+    // Screen mesh size (local) from bounding box:
+    const screenW = size.x;
+    const screenH = size.y;
+    const screenAspect = screenW / screenH;
+
+    // We want "contain" so it never spills over edges.
+    // Slight overscan (1.002) just to kill subpixel gaps without visible overspill.
+    const overscan = 1.002;
+
+    let planeW = screenW * overscan;
+    let planeH = screenH * overscan;
+
+    if (screenAspect > texAspect) {
+      // screen wider than texture -> fit by height
+      planeH = screenH * overscan;
+      planeW = planeH * texAspect;
+    } else {
+      // screen taller than texture -> fit by width
+      planeW = screenW * overscan;
+      planeH = planeW / texAspect;
+    }
 
     console.log("📐 Screen mesh local size:", size.x.toFixed(3), "x", size.y.toFixed(3));
-    console.log("📐 Plane size (overscan):", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
+    console.log("📐 Texture aspect:", texAspect.toFixed(3), "Screen aspect:", screenAspect.toFixed(3));
+    console.log("📐 Plane size (perfect fit):", planeW.toFixed(3), "x", planeH.toFixed(3));
 
     screenPlaneRef.current.geometry.dispose();
-    screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+    screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeW, planeH);
 
-    // Push forward a bit more so it always sits on top of the screen surface
-    screenPlaneRef.current.position.set(0, 0, 0.02);
+    // Z offset for safety (z-fighting)
+    screenPlaneRef.current.position.set(0, 0, 0.012);
+    
+    // Also update bloom plane geometry (slightly larger)
+    if (screenBloomRef.current) {
+      screenBloomRef.current.geometry.dispose();
+      screenBloomRef.current.geometry = new THREE.PlaneGeometry(planeW * 1.04, planeH * 1.04);
+    }
 
     // Apply texture to our plane - CRITICAL: flipY = true for PlaneGeometry (opposite of GLTF mesh)
     screenTex.flipY = true; // <-- DIFFERENT from GLTF screen mesh
@@ -291,6 +320,17 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
       {/* Replacement screen plane - positioned where original screen was */}
       <group ref={screenAnchorRef}>
+        {/* Soft OLED bloom behind screen */}
+        <mesh ref={screenBloomRef} position={[0, 0, -0.01]} renderOrder={998}>
+          <planeGeometry args={[1, 2]} />
+          <meshBasicMaterial
+            color="#1E7A4A"
+            transparent
+            opacity={0.08}
+            depthWrite={false}
+          />
+        </mesh>
+        
         <mesh ref={screenPlaneRef}>
           {/* Geometry will be set in useEffect based on screen mesh size */}
           <planeGeometry args={[1, 2]} />

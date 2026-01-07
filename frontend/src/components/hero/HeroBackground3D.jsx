@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment, Float, Text } from "@react-three/drei";
+import { Environment, Float } from "@react-three/drei";
 import * as THREE from "three";
 import IPhoneModel from "./IPhoneModel.jsx";
 
@@ -8,105 +8,90 @@ export default function HeroBackground3D() {
   return (
     <Canvas
       className="h-full w-full"
-      dpr={[1, 1.5]}
-      camera={{ position: [0.15, 0.12, 2.75], fov: 28 }}
+      dpr={[1, 1.75]}
+      camera={{ position: [0.0, 0.1, 2.25], fov: 24 }} // ✅ tighter + closer = BIG phone
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
         gl.outputColorSpace = THREE.SRGBColorSpace;
+        gl.toneMapping = THREE.NoToneMapping; // ✅ keep whites WHITE (screen)
       }}
-      shadows
     >
-      <ambientLight intensity={1.0} />
-      <directionalLight position={[2, 2, 2]} intensity={1.5} castShadow />
-      <pointLight position={[-2, 1, 2]} intensity={0.6} />
-      
-      {/* Stronger, tighter rim light on right edge + top edge */}
-      <pointLight position={[3.5, 1.2, 0.8]} intensity={1.2} color="#1E7A4A" />
-      <pointLight position={[2.8, 2.5, 0.5]} intensity={0.9} color="#2AAE67" />
-      
-      {/* Stage spotlight behind phone (not centered) */}
-      <spotLight
-        position={[1.8, 0.3, 1.5]}
-        angle={0.35}
-        penumbra={0.6}
-        intensity={0.8}
-        color="#1E7A4A"
+      {/* --- Lighting rig: Apple-style product shot --- */}
+      {/* Soft base ambience (keep low to let lights shape the model) */}
+      <ambientLight intensity={0.55} />
+
+      {/* Key light (front-left, soft) */}
+      <directionalLight
+        position={[-2.2, 1.6, 2.4]}
+        intensity={1.25}
         castShadow={false}
-        target-position={[0.85, 0.05, 0]}
+      />
+
+      {/* Fill light (front-right, very soft) */}
+      <pointLight position={[1.9, 0.6, 2.2]} intensity={0.55} />
+
+      {/* Rim light (right edge highlight) */}
+      <pointLight
+        position={[2.4, 0.7, 0.3]}
+        intensity={1.3}
+        color="#2AAE67"
+        distance={6}
+        decay={2}
+      />
+
+      {/* Back glow pocket behind phone (stage glow) */}
+      <pointLight
+        position={[0.8, 0.0, -0.25]}
+        intensity={1.4}
+        color="#1E7A4A"
+        distance={4}
+        decay={2}
       />
 
       <Environment preset="studio" />
 
-      {/* Phone: BIG, centered-left, face-on, hero product */}
       <Suspense fallback={null}>
-        {/* Stage spotlight pocket behind phone (tight radial glow) */}
-        <pointLight 
-          position={[0.55, 0.15, 1.2]} 
-          intensity={1.5} 
-          color="#1E7A4A"
-          distance={2.5}
-          decay={2}
-        />
-        
-        {/* Vignette around stage pocket */}
-        <mesh position={[0.55, 0.15, 0.5]} rotation={[0, 0, 0]}>
-          <ringGeometry args={[1.8, 3.5, 32]} />
-          <meshBasicMaterial 
-            color="#000000" 
-            transparent 
-            opacity={0.4}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-        
-        <Float speed={1.05} rotationIntensity={0.18} floatIntensity={0.22}>
+        {/* --- Phone group --- */}
+        <Float speed={0.9} rotationIntensity={0.12} floatIntensity={0.12}>
           <group
-            position={[1.05, 0.05, 0]}  // Adjusted for bigger phone
-            rotation={[0.04, -0.22, 0.02]}  // Slightly more face-on
+            // ✅ "hero-right" placement while still centered in composition
+            position={[0.82, -0.02, 0]}
+            rotation={[0.02, -0.38, 0.01]}
           >
-            <IPhoneModel heroScale={4.6} />  // WAY bigger - hero product shot
+            {/* Screen glow card behind phone (makes display feel lit) */}
+            <mesh position={[0.06, 0.07, -0.06]}>
+              <planeGeometry args={[1.15, 2.4]} />
+              <meshBasicMaterial
+                color="#1E7A4A"
+                transparent
+                opacity={0.10}
+                depthWrite={false}
+              />
+            </mesh>
+
+            {/* Stronger inner glow (smaller + brighter) */}
+            <mesh position={[0.04, 0.08, -0.05]}>
+              <planeGeometry args={[0.78, 1.8]} />
+              <meshBasicMaterial
+                color="#2AAE67"
+                transparent
+                opacity={0.10}
+                depthWrite={false}
+              />
+            </mesh>
+
+            {/* ✅ BIG phone */}
+            <IPhoneModel heroScale={5.25} />
           </group>
         </Float>
-        
-        {/* Soft occlusion shadow under phone (grounded) */}
-        <mesh position={[0.55, -0.35, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[1.5, 1.5]} />
-          <meshBasicMaterial 
-            color="#000000" 
-            transparent 
-            opacity={0.25}
-          />
+
+        {/* Soft ground shadow (subtle, not obvious) */}
+        <mesh position={[0.78, -0.62, 0.1]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.55, 48]} />
+          <meshBasicMaterial color="#000000" transparent opacity={0.22} />
         </mesh>
-        
-        {/* Tiny pill callout above/left of phone (not overlapping) */}
-        <group position={[0.15, 0.45, 0]}>
-          <mesh>
-            <planeGeometry args={[0.35, 0.08]} />
-            <meshBasicMaterial 
-              color="#101614" 
-              transparent 
-              opacity={0.9}
-            />
-          </mesh>
-          <Text
-            position={[0, 0, 0.01]}
-            fontSize={0.028}
-            color="#F3F5F4"
-            anchorX="center"
-            anchorY="middle"
-            maxWidth={0.3}
-          >
-            Edit → Live
-          </Text>
-          {/* Arrow pointing to phone */}
-          <mesh position={[0.2, -0.02, 0.01]} rotation={[0, 0, Math.PI / 4]}>
-            <boxGeometry args={[0.015, 0.08, 0.01]} />
-            <meshBasicMaterial color="#1E7A4A" />
-          </mesh>
-        </group>
       </Suspense>
     </Canvas>
   );
 }
-
