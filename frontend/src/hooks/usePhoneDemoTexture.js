@@ -71,19 +71,19 @@ export function usePhoneDemoTexture() {
         }
         tt -= s.dur;
       }
-      
+
       // Only update texture if state changed or progress changed significantly
       const stateChanged = step !== lastStep?.step;
       const progressChanged = Math.floor(local * 10) !== Math.floor((lastStep?.local ?? 0) * 10);
       const shouldRedraw = stateChanged || progressChanged || step === "edit" || step === "sync";
-      
+
       if (!shouldRedraw && !stateChanged) {
         raf = requestAnimationFrame(draw);
         return;
       }
-      
+
       lastStep = { step, local };
-      
+
       // Debug: log first draw
       if (t < 0.1) {
         console.log("🎬 First frame drawing:", { step, W, H });
@@ -92,12 +92,12 @@ export function usePhoneDemoTexture() {
       // Background - ALWAYS fill entire screen with solid background (critical for visibility)
       const W = canvas.width;
       const H = canvas.height;
-      
+
       // Clear and fill with bright background
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = "#1A211E"; // Even brighter background for visibility
       ctx.fillRect(0, 0, W, H);
-      
+
       // Test: Draw a bright test pattern first to verify canvas is working
       if (t < 0.5) {
         // First 0.5s: show bright test pattern
@@ -112,7 +112,7 @@ export function usePhoneDemoTexture() {
         raf = requestAnimationFrame(draw);
         return;
       }
-      
+
       // Subtle vignette - center is brightest (perception hack)
       const gradient = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.8);
       gradient.addColorStop(0, "rgba(0,0,0,0)");
@@ -129,7 +129,7 @@ export function usePhoneDemoTexture() {
       ctx.fillStyle = "#FFFFFF"; // Pure white for max contrast
       ctx.font = "900 64px Inter, system-ui"; // Bolder, bigger
       ctx.fillText("Demo Restaurant", 130, 245);
-      
+
       // Always-on "Live" indicator (subtle when not live)
       if (step === "live") {
         ctx.fillStyle = "#1E7A4A";
@@ -148,28 +148,28 @@ export function usePhoneDemoTexture() {
       const safeAreaBottom = 200;
       const safeAreaLeft = 100;
       const safeAreaRight = 100;
-      
+
       // Single hero item - BIG and obvious
       const heroItem = {
         name: "Margherita Pizza",
         price: step === "live" ? "$14.99" : "$16.99",
         isChanged: step === "live"
       };
-      
+
       const cardY = safeAreaTop;
       const cardH = 280; // Bigger single row
       const cardW = W - safeAreaLeft - safeAreaRight;
-      
+
       // Card background - much brighter for hero visibility
       ctx.fillStyle = "#28302D";
-      ctx.strokeStyle = heroItem.isChanged 
+      ctx.strokeStyle = heroItem.isChanged
         ? "rgba(30,122,74,1.0)" // Very strong highlight
         : "rgba(30,122,74,0.4)";
       ctx.lineWidth = heroItem.isChanged ? 6 : 4;
       roundRect(ctx, safeAreaLeft, cardY, cardW, cardH, 60);
       ctx.fill();
       ctx.stroke();
-      
+
       // Flash highlight for changed price
       if (heroItem.isChanged) {
         ctx.fillStyle = "rgba(30,122,74,0.2)";
@@ -188,7 +188,7 @@ export function usePhoneDemoTexture() {
       ctx.textAlign = "right";
       ctx.fillText(heroItem.price, W - safeAreaRight - 50, cardY + cardH / 2 - 20);
       ctx.textAlign = "left";
-      
+
       // Edit affordance - always visible pencil icon or slider hint
       if (step === "menu") {
         ctx.fillStyle = "rgba(30,122,74,0.6)";
@@ -262,7 +262,7 @@ export function usePhoneDemoTexture() {
         ctx.fillStyle = "#1E7A4A";
         roundRect(ctx, safeAreaLeft + 50, progressY, (cardW - 100) * local, 40, 40);
         ctx.fill();
-        
+
         // Percentage text - BIG
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "900 52px Inter, system-ui"; // Bigger
@@ -287,7 +287,7 @@ export function usePhoneDemoTexture() {
         const badgeY = 120;
         const badgeW = 220;
         const badgeH = 120;
-        
+
         // Multiple glow layers for strong visibility
         ctx.shadowColor = "rgba(30,122,74,0.95)";
         ctx.shadowBlur = 50;
@@ -295,12 +295,12 @@ export function usePhoneDemoTexture() {
         roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 60);
         ctx.fill();
         ctx.shadowBlur = 0;
-        
+
         // Badge itself - bright green
         ctx.fillStyle = "#1E7A4A";
         roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 60);
         ctx.fill();
-        
+
         // Flash pulse effect (subtle)
         const pulse = Math.sin(local * Math.PI * 2) * 0.1 + 0.9;
         ctx.fillStyle = `rgba(255,255,255,${pulse * 0.35})`;
@@ -343,7 +343,7 @@ export function usePhoneDemoTexture() {
       ctx.lineWidth = step === "live" ? 16 : 8;
       roundRect(ctx, 25, 95, W - 50, H - 190, 50);
       ctx.stroke();
-      
+
       // Inner glow (softer)
       ctx.strokeStyle = `rgba(30,122,74,${glowIntensity * 0.5})`;
       ctx.lineWidth = 6;

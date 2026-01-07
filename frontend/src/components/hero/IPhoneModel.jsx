@@ -190,7 +190,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         worldBox.getSize(worldSize);
         localBox.setFromCenterAndSize(new THREE.Vector3(), worldSize);
       }
-      
+
       const localSize = new THREE.Vector3();
       localBox.getSize(localSize);
 
@@ -232,7 +232,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         screenPlaneRef.current.material = material;
         screenPlaneRef.current.material.needsUpdate = true;
         screenPlaneRef.current.visible = true;
-        
+
         // Make plane "unmissable" for testing: double-sided, render on top, bigger z-offset
         screenPlaneRef.current.material.side = THREE.DoubleSide;
         screenPlaneRef.current.renderOrder = 999; // Render on top
