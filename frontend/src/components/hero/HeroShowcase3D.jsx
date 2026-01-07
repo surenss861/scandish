@@ -34,8 +34,14 @@ export default function HeroShowcase3D() {
     };
   }, []);
 
-  // Don't render on mobile, reduced motion, or until ready
-  if (reduced || isMobile || !shouldRender) return null;
+  // Fallback skeleton
+  if (reduced || isMobile || !shouldRender) {
+    return (
+      <div className="absolute inset-0 -z-10 flex items-center justify-center">
+        <div className="w-64 h-96 bg-[#101614] border border-[#1B2420] rounded-3xl opacity-20" />
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 -z-10">
@@ -48,7 +54,12 @@ export default function HeroShowcase3D() {
         <ambientLight intensity={0.7} />
         <directionalLight position={[3, 4, 2]} intensity={1.2} castShadow />
 
-        <Suspense fallback={null}>
+        <Suspense fallback={
+          <mesh>
+            <boxGeometry args={[1, 2, 0.1]} />
+            <meshStandardMaterial color="#1E7A4A" opacity={0.2} transparent />
+          </mesh>
+        }>
           <IPhoneModel />
         </Suspense>
 

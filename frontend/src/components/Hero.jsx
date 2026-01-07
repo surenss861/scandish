@@ -65,8 +65,14 @@ export default function Hero() {
               ))}
             </div>
 
+            {/* Proof Chip */}
+            <div className="mb-6 inline-flex items-center gap-2 bg-[#101614] border border-[#1B2420] rounded-full px-4 py-2">
+              <span className="text-[#1E7A4A] font-semibold">73+</span>
+              <span className="text-sm text-[#A6B0AA]">restaurants in Toronto</span>
+            </div>
+
             {/* CTAs */}
-            <div className="flex flex-wrap gap-4 mb-6">
+            <div className="flex flex-wrap gap-4 mb-4">
               <Link
                 to="/login"
                 className="px-6 py-3 bg-[#1E7A4A] text-[#F3F5F4] rounded-xl font-semibold hover:bg-[#2AAE67] transition-colors"
@@ -81,13 +87,18 @@ export default function Hero() {
               </Link>
             </div>
 
-            {/* Trust Line */}
-            <p className="text-sm text-[#A6B0AA]">
-              Free plan • Cancel anytime • Takes 3 minutes
-            </p>
+            {/* Micro-Trust Lines */}
+            <div className="space-y-1 mb-4">
+              <p className="text-sm text-[#A6B0AA]">
+                ✓ Free plan • Cancel anytime
+              </p>
+              <p className="text-sm text-[#A6B0AA]">
+                ✓ Takes 3 minutes to launch
+              </p>
+            </div>
           </motion.div>
 
-          {/* Right: Interactive Demo (Desktop) or 3D iPhone placeholder (Mobile) */}
+          {/* Right: Clickable Demo Preview */}
           <motion.div
             data-parallax
             initial={{ opacity: 0, x: 20 }}
@@ -97,14 +108,20 @@ export default function Hero() {
           >
             {/* On mobile, show a simple placeholder since 3D is disabled */}
             <div className="lg:hidden flex items-center justify-center h-[400px]">
-              <div className="text-center">
+              <Link
+                to="/menu/demo"
+                className="text-center hover:opacity-80 transition-opacity"
+              >
                 <div className="text-6xl mb-4">📱</div>
-                <p className="text-[#A6B0AA]">View on desktop for 3D preview</p>
-              </div>
+                <p className="text-[#A6B0AA]">Tap to view live demo</p>
+              </Link>
             </div>
             
-            {/* Phone Frame with Menu Preview (Desktop only) */}
-            <div className="relative hidden lg:block bg-[#101614] border-2 border-[#1B2420] rounded-[2rem] p-4 shadow-2xl">
+            {/* Clickable Phone Frame with Menu Preview (Desktop) */}
+            <Link
+              to="/menu/demo"
+              className="relative hidden lg:block bg-[#101614] border-2 border-[#1B2420] rounded-[2rem] p-4 shadow-2xl hover:border-[#1E7A4A] transition-all group cursor-pointer"
+            >
               <div className="bg-[#0B0F0E] rounded-[1.5rem] overflow-hidden">
                 {/* Phone Header */}
                 <div className="bg-[#101614] border-b border-[#1B2420] px-4 py-3">
@@ -129,12 +146,7 @@ export default function Hero() {
                     {demoItems.map((item) => (
                       <motion.div
                         key={item.id}
-                        className="bg-[#101614] border border-[#1B2420] rounded-xl p-3 cursor-move"
-                        draggable
-                        onDragStart={() => setDraggedItem(item)}
-                        onDragEnd={() => setDraggedItem(null)}
-                        whileHover={{ scale: 1.02, borderColor: "#1E7A4A" }}
-                        whileDrag={{ scale: 1.05, opacity: 0.8 }}
+                        className="bg-[#101614] border border-[#1B2420] rounded-xl p-3 group-hover:border-[#1E7A4A]/50 transition-colors"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-medium text-[#F3F5F4]">
@@ -149,26 +161,23 @@ export default function Hero() {
                   </div>
                 </div>
               </div>
-            </div>
+              
+              {/* Hover indicator */}
+              <div className="absolute inset-0 flex items-center justify-center bg-[#1E7A4A]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem] pointer-events-none">
+                <span className="text-[#1E7A4A] font-semibold">Click to view live demo →</span>
+              </div>
+            </Link>
 
             {/* QR Code */}
-            <div className="absolute -bottom-8 -right-8 bg-[#101614] border-2 border-[#1B2420] rounded-2xl p-4 shadow-xl">
+            <Link
+              to="/menu/demo"
+              className="absolute -bottom-8 -right-8 bg-[#101614] border-2 border-[#1B2420] rounded-2xl p-4 shadow-xl hover:border-[#1E7A4A] transition-colors"
+            >
               <QrPreview url="https://scandish.ca/menu/demo" size={120} />
               <p className="text-xs text-center text-[#A6B0AA] mt-2 font-medium">
                 Scan to view
               </p>
-            </div>
-
-            {/* Live Editor Indicator */}
-            {draggedItem && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute top-4 left-4 bg-[#1E7A4A] text-[#F3F5F4] px-4 py-2 rounded-lg shadow-lg font-semibold text-sm"
-              >
-                ✨ Live Editor
-              </motion.div>
-            )}
+            </Link>
           </motion.div>
         </div>
       </div>
