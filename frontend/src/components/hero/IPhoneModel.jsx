@@ -8,21 +8,19 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   
   console.log("🔵 IPhoneModel component rendering, loading:", url);
   
-  // Load the GLB model (hooks must be called unconditionally)
+  // Load the GLB model
   let scene;
+  let glbError = null;
+  
   try {
     const result = useGLTF(url);
     scene = result.scene;
-    console.log("✅ GLB model loaded successfully:", url, scene);
+    console.log("✅ GLB model loaded successfully:", url);
+    console.log("📦 Scene object:", scene);
+    console.log("📦 Scene children count:", scene.children.length);
   } catch (error) {
     console.error("❌ Failed to load GLB model:", error);
-    // Return a visible placeholder so we know the component is rendering
-    return (
-      <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[2, 4, 0.2]} />
-        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
-      </mesh>
-    );
+    glbError = error;
   }
 
   // Create screen texture from canvas (menu preview)
@@ -71,7 +69,6 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
     console.log("📦 GLB URL:", url);
-    console.log("📦 Scene children:", scene.children.length);
 
     // Try multiple common screen mesh names
     const screenNames = ["Screen", "screen", "Display", "display", "Glass", "glass", "Front", "front", "LCD", "lcd", "Screen_0", "screen_0"];
@@ -151,21 +148,22 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
 
-  if (!scene) {
-    console.error("❌ Scene is null, returning placeholder");
+  // If GLB failed to load, show error mesh
+  if (glbError || !scene) {
+    console.error("❌ Returning error placeholder");
     return (
       <mesh position={[0, 0, 0]}>
-        <boxGeometry args={[2, 4, 0.2]} />
-        <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
+        <boxGeometry args={[3, 5, 0.3]} />
+        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={1} />
       </mesh>
     );
   }
 
-  console.log("✅ Rendering iPhone model");
+  console.log("✅ Rendering iPhone model with scene");
 
   return (
     <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
-      <group ref={group} position={[0, -0.2, 0]} scale={1.2}>
+      <group ref={group} position={[0, 0, 0]} scale={2}>
         <primitive object={scene} />
       </group>
     </Float>
