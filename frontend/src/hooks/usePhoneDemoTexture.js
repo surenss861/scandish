@@ -15,9 +15,12 @@ export function usePhoneDemoTexture() {
   const ctxRef = useRef(null);
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(canvas);
-    t.colorSpace = THREE.SRGBColorSpace;
+    t.colorSpace = THREE.SRGBColorSpace; // Critical: sRGB for proper whites
     t.anisotropy = 8;
     t.flipY = false;
+    t.generateMipmaps = false; // No mipmaps for crisp text
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
     return t;
   }, [canvas]);
 
@@ -57,8 +60,8 @@ export function usePhoneDemoTexture() {
       const W = canvas.width;
       const H = canvas.height;
       ctx.clearRect(0, 0, W, H);
-      // Solid bright background - fills entire canvas
-      ctx.fillStyle = "#141A18"; // Bright enough to read as "OLED on"
+      // Solid bright background - fills entire canvas (brighter for hero visibility)
+      ctx.fillStyle = "#161C1A"; // Brighter background so it reads as "OLED on" from distance
       ctx.fillRect(0, 0, W, H);
 
       // Top bar - much brighter, fills full width
@@ -79,28 +82,38 @@ export function usePhoneDemoTexture() {
         ["Pasta Carbonara", step === "live" ? "$19.99" : "$18.99"], // OBVIOUS price change
       ];
       let y = 400;
-      for (const [name, price] of items) {
-        // Card background - bright white cards (high contrast)
-        ctx.fillStyle = "#1F2522";
-        ctx.strokeStyle = step === "live" && (price.includes("14.99") || price.includes("19.99")) 
-          ? "rgba(30,122,74,0.6)" // Highlight changed prices
-          : "rgba(30,122,74,0.25)";
-        ctx.lineWidth = 3;
-        roundRect(ctx, 80, y, W - 160, 180, 48);
+      for (let i = 0; i < items.length; i++) {
+        const [name, price] = items[i];
+        const isChanged = step === "live" && (price.includes("14.99") || price.includes("19.99"));
+        
+        // Card background - brighter cards for hero visibility
+        ctx.fillStyle = "#222A28";
+        ctx.strokeStyle = isChanged 
+          ? "rgba(30,122,74,0.8)" // Strong highlight for changed prices
+          : "rgba(30,122,74,0.3)";
+        ctx.lineWidth = isChanged ? 5 : 3;
+        roundRect(ctx, 80, y, W - 160, 200, 52); // Bigger cards
         ctx.fill();
         ctx.stroke();
+        
+        // Flash highlight for changed prices
+        if (isChanged) {
+          ctx.fillStyle = "rgba(30,122,74,0.15)";
+          roundRect(ctx, 80, y, W - 160, 200, 52);
+          ctx.fill();
+        }
 
-        // Text - pure white, bigger
+        // Text - pure white, bigger for hero visibility
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "800 52px Inter, system-ui";
-        ctx.fillText(name, 120, y + 115);
+        ctx.font = "900 58px Inter, system-ui"; // Bigger
+        ctx.fillText(name, 120, y + 120);
 
-        // Price - bright green, even larger
-        ctx.fillStyle = "#1E7A4A";
-        ctx.font = "900 56px Inter, system-ui";
-        ctx.fillText(price, W - 280, y + 115);
+        // Price - bright green, even larger, flash on change
+        ctx.fillStyle = isChanged ? "#2AAE67" : "#1E7A4A"; // Brighter green when changed
+        ctx.font = "900 62px Inter, system-ui"; // Even bigger
+        ctx.fillText(price, W - 280, y + 120);
 
-        y += 220;
+        y += 240; // More spacing
       }
 
       // Primary button - bright green
@@ -140,25 +153,33 @@ export function usePhoneDemoTexture() {
         ctx.fill();
       }
 
-      // Syncing step with progress bar
+      // Syncing step with BIG progress bar (obvious action)
       if (step === "sync") {
-        ctx.fillStyle = "rgba(255,255,255,0.1)";
-        roundRect(ctx, 120, 1380, W - 240, 220, 54);
+        ctx.fillStyle = "rgba(255,255,255,0.12)";
+        roundRect(ctx, 100, 1400, W - 200, 280, 60);
         ctx.fill();
 
-        ctx.fillStyle = "#F3F5F4";
-        ctx.font = "700 48px Inter, system-ui";
-        ctx.fillText("Syncing…", 180, 1470);
+        // Big "Updating..." text
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "900 56px Inter, system-ui";
+        ctx.fillText("Updating…", 150, 1500);
 
-        // Progress bar track
-        ctx.fillStyle = "rgba(255,255,255,0.2)";
-        roundRect(ctx, 180, 1520, W - 360, 18, 18);
+        // BIG progress bar track
+        ctx.fillStyle = "rgba(255,255,255,0.25)";
+        roundRect(ctx, 150, 1580, W - 300, 28, 28); // Bigger, more visible
         ctx.fill();
 
-        // Progress bar fill - bright green
+        // Progress bar fill - bright green, animated
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, 180, 1520, (W - 360) * local, 18, 18);
+        roundRect(ctx, 150, 1580, (W - 300) * local, 28, 28);
         ctx.fill();
+        
+        // Percentage text
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.font = "700 42px Inter, system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(`${Math.round(local * 100)}%`, W / 2, 1600);
+        ctx.textAlign = "left";
       }
 
       // Live step toast + "Live" badge
@@ -172,30 +193,36 @@ export function usePhoneDemoTexture() {
         ctx.font = "800 46px Inter, system-ui";
         ctx.fillText("Live in seconds ✓", 180, 1510);
 
-        // "Live" badge - EXTREMELY OBVIOUS, bigger, glowing
-        const badgeX = W - 260;
-        const badgeY = 120;
-        const badgeW = 190;
-        const badgeH = 100;
+        // "Live" badge - EXTREMELY OBVIOUS, bigger, glowing with flash
+        const badgeX = W - 280;
+        const badgeY = 110;
+        const badgeW = 210;
+        const badgeH = 110;
         
-        // Outer glow (multiple layers for strong glow)
-        ctx.shadowColor = "rgba(30,122,74,0.8)";
-        ctx.shadowBlur = 30;
+        // Multiple glow layers for strong visibility
+        ctx.shadowColor = "rgba(30,122,74,0.9)";
+        ctx.shadowBlur = 40;
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 50);
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 55);
         ctx.fill();
         ctx.shadowBlur = 0;
         
         // Badge itself - bright green
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 50);
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 55);
+        ctx.fill();
+        
+        // Flash pulse effect (subtle)
+        const pulse = Math.sin(local * Math.PI * 2) * 0.1 + 0.9;
+        ctx.fillStyle = `rgba(255,255,255,${pulse * 0.3})`;
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 55);
         ctx.fill();
 
         // Text - pure white, bigger
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "900 50px Inter, system-ui";
+        ctx.font = "900 54px Inter, system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("LIVE", W - 165, 175);
+        ctx.fillText("LIVE", W - 175, 175);
         ctx.textAlign = "left";
       } else {
         // "Preview" badge when not live
@@ -222,19 +249,20 @@ export function usePhoneDemoTexture() {
 
       // Screen edge emissive illusion - always visible, stronger when live
       ctx.save();
-      const glowIntensity = step === "live" ? 0.25 : 0.08;
+      const glowIntensity = step === "live" ? 0.35 : 0.1; // Stronger glow when live
       ctx.strokeStyle = `rgba(30,122,74,${glowIntensity})`;
-      ctx.lineWidth = step === "live" ? 12 : 6;
+      ctx.lineWidth = step === "live" ? 16 : 8;
       roundRect(ctx, 25, 95, W - 50, H - 190, 50);
       ctx.stroke();
       
       // Inner glow (softer)
-      ctx.strokeStyle = `rgba(30,122,74,${glowIntensity * 0.4})`;
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = `rgba(30,122,74,${glowIntensity * 0.5})`;
+      ctx.lineWidth = 6;
       roundRect(ctx, 35, 105, W - 70, H - 210, 45);
       ctx.stroke();
       ctx.restore();
 
+      // CRITICAL: Mark texture as dirty EVERY frame for smooth animation
       texture.needsUpdate = true;
       raf = requestAnimationFrame(draw);
     };

@@ -22,6 +22,7 @@ function applyTextureToMesh(mesh, tex) {
   tex.minFilter = THREE.LinearFilter;
   tex.magFilter = THREE.LinearFilter;
   tex.generateMipmaps = false; // Disable mipmaps for crisp text
+  tex.colorSpace = THREE.SRGBColorSpace; // Ensure sRGB for proper whites
 
   const makeMat = () =>
     new THREE.MeshBasicMaterial({
@@ -31,7 +32,7 @@ function applyTextureToMesh(mesh, tex) {
       // Make it truly unlit and emissive - like a real OLED panel
       emissive: new THREE.Color(0xffffff),
       emissiveMap: tex,
-      emissiveIntensity: 1.2, // Strong emissive so it punches through glass
+      emissiveIntensity: 1.4, // Increased emissive for hero visibility
     });
 
   if (Array.isArray(mesh.material)) {
