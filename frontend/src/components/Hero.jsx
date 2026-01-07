@@ -115,8 +115,8 @@ export default function Hero() {
                 </Link>
               </div>
 
-              {/* QR badge overlay */}
-              <div className="absolute bottom-4 right-4 z-20 pointer-events-auto">
+              {/* QR badge overlay - outside stage to not block phone */}
+              <div className="absolute -bottom-6 right-0 translate-x-6 z-20 pointer-events-auto">
                 <div className="bg-[#101614]/85 border border-[#1B2420] rounded-2xl p-3 shadow-xl">
                   <QrPreview url="https://scandish.ca/menu/demo" size={92} />
                   <p className="text-[11px] text-center text-[#A6B0AA] mt-2 font-medium">

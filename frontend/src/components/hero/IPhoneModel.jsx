@@ -1,349 +1,383 @@
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useEffect, useMemo, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Float, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
-}
-
-export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) {
+export default function IPhoneModel({
+  url = "/models/scandish.glb",
+  onLoaded,
+}) {
   const group = useRef(null);
   const screenMeshRef = useRef(null);
-  const hovered = useRef(false);
-  const clickedAt = useRef(0);
-
-  console.log("🔵 IPhoneModel component rendering, loading:", url);
+  const [hoveringScreen, setHoveringScreen] = useState(false);
 
   const { scene } = useGLTF(url);
 
-  // ----- CanvasTexture (demo renderer) -----
-  const { canvas, ctx, tex } = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1170;
-    canvas.height = 2532;
-    const ctx = canvas.getContext("2d");
-    const tex = new THREE.CanvasTexture(canvas);
+  // --- CANVAS SCREEN (animated fake demo) ---
+  const screen = useMemo(() => {
+    const c = document.createElement("canvas");
+    // keep it lighter for perf but still crisp
+    c.width = 900;
+    c.height = 1950;
+    const ctx = c.getContext("2d");
+    const tex = new THREE.CanvasTexture(c);
     tex.flipY = false;
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 8;
-    return { canvas, ctx, tex };
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return { c, ctx, tex };
   }, []);
 
-  // Demo state machine (auto)
-  const demo = useRef({
-    step: 0, // 0 menu, 1 edit, 2 syncing, 3 live
-    t: 0,
-    price: 16.99,
-    nextPrice: 18.49,
-    progress: 0,
-    manualUntil: 0,
-  });
+  // Demo timeline (seconds)
+  const timeline = useMemo(
+    () => [
+      { key: "menu", dur: 2.2 },
+      { key: "edit", dur: 2.2 },
+      { key: "sync", dur: 1.8 },
+      { key: "live", dur: 2.0 },
+    ],
+    []
+  );
 
-  const advanceStep = (now) => {
-    const d = demo.current;
-    d.step = (d.step + 1) % 4; // 0->1->2->3->0
-    d.t = 0;
-    d.progress = 0;
-    // pause auto for a moment so user click feels like it "took over"
-    d.manualUntil = now + 2.2;
-    // little flash timing
-    clickedAt.current = now;
-  };
+  const total = useMemo(() => timeline.reduce((a, s) => a + s.dur, 0), [timeline]);
 
-  function drawScreen() {
-    const W = canvas.width;
-    const H = canvas.height;
-    // background
+  // click-to-advance & pause logic
+  const pauseUntilRef = useRef(0);
+  const manualStepRef = useRef(null); // { key, t0 }
+
+  const items = useMemo(
+    () => [
+      { name: "Margherita Pizza", price: 16.99 },
+      { name: "Caesar Salad", price: 12.99 },
+      { name: "Pasta Carbonara", price: 18.99 },
+    ],
+    []
+  );
+
+  function drawRoundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawPill(ctx, text, x, y, w, h, bg, fg) {
+    ctx.save();
+    ctx.fillStyle = bg;
+    drawRoundedRect(ctx, x, y, w, h, h / 2);
+    ctx.fill();
+    ctx.fillStyle = fg;
+    ctx.font = "600 46px Inter, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + w / 2, y + h / 2 + 2);
+    ctx.restore();
+  }
+
+  function drawUI(stepKey, stepT) {
+    const { ctx, c } = screen;
+    const W = c.width;
+    const H = c.height;
+
+    // base
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0B0F0E";
     ctx.fillRect(0, 0, W, H);
+
     // top bar
     ctx.fillStyle = "#101614";
     ctx.fillRect(0, 0, W, 140);
+
     ctx.fillStyle = "#F3F5F4";
-    ctx.font = "700 64px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
+    ctx.font = "700 56px Inter, system-ui, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Demo Restaurant", 80, 92);
-    // live badge
-    ctx.textAlign = "right";
-    ctx.font = "600 40px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.fillStyle = "#1E7A4A";
-    ctx.fillText(demo.current.step >= 3 ? "Live" : "Preview", W - 80, 92);
-    // section label
+    ctx.textBaseline = "middle";
+    ctx.fillText("Demo Restaurant", 60, 70);
+
+    // "Live" badge (only in live step)
+    if (stepKey === "live") {
+      drawPill(ctx, "Live", W - 180, 34, 120, 72, "rgba(30,122,74,0.95)", "#F3F5F4");
+    } else {
+      ctx.fillStyle = "rgba(166,176,170,0.5)";
+      ctx.font = "500 34px Inter, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("Preview", W - 60, 78);
+    }
+
+    // list cards
+    let y = 230;
+    ctx.font = "700 34px Inter, system-ui, sans-serif";
+    ctx.fillStyle = "rgba(166,176,170,0.75)";
     ctx.textAlign = "left";
-    ctx.fillStyle = "#A6B0AA";
-    ctx.font = "700 34px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.fillText(demo.current.step === 1 ? "EDIT ITEM" : "PIZZA", 80, 220);
+    ctx.fillText("PIZZA", 60, y - 60);
 
-    const cardX = 80;
-    let y = 280;
-    const items = [
-      { name: "Margherita Pizza", price: demo.current.step >= 3 ? demo.current.nextPrice : demo.current.price },
-      { name: "Caesar Salad", price: 12.99 },
-      { name: "Pasta Carbonara", price: 18.99 },
-    ];
+    const editedPrice = 14.99; // fake changed value
+    const priceFor = (i) => {
+      if (stepKey === "live") return i === 0 ? editedPrice : items[i].price;
+      if (stepKey === "edit") {
+        // slider anim: ease between original->edited
+        const a = items[i].price;
+        const b = i === 0 ? editedPrice : items[i].price;
+        const k = i === 0 ? Math.min(1, Math.max(0, stepT)) : 0;
+        return a + (b - a) * (k * k * (3 - 2 * k));
+      }
+      return items[i].price;
+    };
 
-    function drawCard(label, value, highlight = false) {
-      const w = W - 160;
-      const h = 170;
-      const r = 44;
+    for (let i = 0; i < items.length; i++) {
+      ctx.save();
+      const cardH = 150;
+      const cardW = W - 120;
+      const x = 60;
+
+      // card bg
       ctx.fillStyle = "#101614";
-      ctx.strokeStyle = highlight ? "rgba(30,122,74,0.55)" : "rgba(27,36,32,1)";
-      ctx.lineWidth = 6;
-      // rounded rect
-      ctx.beginPath();
-      ctx.moveTo(cardX + r, y);
-      ctx.arcTo(cardX + w, y, cardX + w, y + h, r);
-      ctx.arcTo(cardX + w, y + h, cardX, y + h, r);
-      ctx.arcTo(cardX, y + h, cardX, y, r);
-      ctx.arcTo(cardX, y, cardX + w, y, r);
-      ctx.closePath();
+      ctx.strokeStyle = "rgba(27,36,32,1)";
+      ctx.lineWidth = 3;
+      drawRoundedRect(ctx, x, y, cardW, cardH, 36);
       ctx.fill();
       ctx.stroke();
+
+      // text
       ctx.fillStyle = "#F3F5F4";
-      ctx.font = "650 48px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
+      ctx.font = "650 44px Inter, system-ui, sans-serif";
       ctx.textAlign = "left";
-      ctx.fillText(label, cardX + 44, y + 105);
+      ctx.textBaseline = "middle";
+      ctx.fillText(items[i].name, x + 40, y + cardH / 2);
+
       ctx.fillStyle = "#1E7A4A";
+      ctx.font = "750 44px Inter, system-ui, sans-serif";
       ctx.textAlign = "right";
-      ctx.font = "750 48px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-      ctx.fillText(`$${value.toFixed(2)}`, cardX + w - 44, y + 105);
-      y += h + 34;
+      const p = priceFor(i);
+      ctx.fillText(`$${p.toFixed(2)}`, x + cardW - 40, y + cardH / 2);
+
+      ctx.restore();
+      y += 180;
     }
 
-    if (demo.current.step !== 1) {
-      drawCard(items[0].name, items[0].price, demo.current.step >= 2);
-      drawCard(items[1].name, items[1].price);
-      drawCard(items[2].name, items[2].price);
-    } else {
-      // Edit screen
-      drawCard("Margherita Pizza", demo.current.price, true);
-      // slider
-      const sx = 120;
-      const sy = y + 80;
-      const sw = W - 240;
-      ctx.fillStyle = "rgba(166,176,170,0.25)";
-      ctx.fillRect(sx, sy, sw, 18);
-      const p = clamp((demo.current.price - 12) / (22 - 12), 0, 1);
-      ctx.fillStyle = "#1E7A4A";
-      ctx.fillRect(sx, sy, sw * p, 18);
-      ctx.beginPath();
-      ctx.arc(sx + sw * p, sy + 9, 26, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#A6B0AA";
-      ctx.font = "600 36px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-      ctx.textAlign = "left";
-      ctx.fillText("Drag to change price", 120, sy - 26);
-      ctx.textAlign = "right";
-      ctx.fillText(`$${demo.current.price.toFixed(2)}`, W - 120, sy - 26);
-      y += 220;
-    }
+    // primary action
+    const btnY = y + 40;
 
-    // bottom CTA
-    const btnW = W - 160;
-    const btnH = 160;
-    const btnX = 80;
-    const btnY = H - 360;
-    ctx.fillStyle = "#1E7A4A";
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(btnX + 52, btnY);
-    ctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + btnH, 52);
-    ctx.arcTo(btnX + btnW, btnY + btnH, btnX, btnY + btnH, 52);
-    ctx.arcTo(btnX, btnY + btnH, btnX, btnY, 52);
-    ctx.arcTo(btnX, btnY, btnX + btnW, btnY, 52);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = "#F3F5F4";
-    ctx.font = "800 52px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    const label =
-      demo.current.step === 0 ? "Edit menu (demo)" :
-        demo.current.step === 1 ? "Publish update" :
-          demo.current.step === 2 ? "Syncing…" :
-            "Replay demo";
-    ctx.fillText(label, W / 2, btnY + 104);
-
-    // syncing progress bar
-    if (demo.current.step === 2) {
-      const px = 140, py = btnY + 130, pw = W - 280, ph = 14;
-      ctx.fillStyle = "rgba(245,245,245,0.22)";
-      ctx.fillRect(px, py, pw, ph);
-      ctx.fillStyle = "#F3F5F4";
-      ctx.fillRect(px, py, pw * clamp(demo.current.progress, 0, 1), ph);
-    }
-
-    // footer microcopy
-    ctx.fillStyle = "#A6B0AA";
-    ctx.font = "600 30px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText('"Update in seconds" — watch it happen.', W / 2, H - 140);
-
-    // QR unchanged badge
-    ctx.textAlign = "right";
-    ctx.fillStyle = "rgba(16,22,20,0.92)";
-    ctx.fillRect(W - 360, H - 220, 280, 90);
-    ctx.strokeStyle = "rgba(27,36,32,1)";
-    ctx.strokeRect(W - 360, H - 220, 280, 90);
-    ctx.fillStyle = "#A6B0AA";
-    ctx.font = "700 28px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
-    ctx.fillText("QR unchanged", W - 100, H - 165);
-
-    // Hover/click affordance
-    const now = demo.current._now || 0;
-    const flash = Math.max(0, 1 - (now - clickedAt.current) / 0.25); // 250ms flash
-
-    if (hovered.current) {
-      // subtle glow frame
-      ctx.strokeStyle = `rgba(30,122,74,${0.35 + 0.25 * flash})`;
-      ctx.lineWidth = 14;
-      ctx.strokeRect(26, 26, W - 52, H - 52);
-
-      // hint pill
-      const pillW = 420, pillH = 84, px = W - pillW - 80, py = 170;
-      ctx.fillStyle = "rgba(16,22,20,0.88)";
-      ctx.fillRect(px, py, pillW, pillH);
-      ctx.strokeStyle = "rgba(27,36,32,1)";
-      ctx.lineWidth = 4;
-      ctx.strokeRect(px, py, pillW, pillH);
-
-      ctx.fillStyle = "#F3F5F4";
-      ctx.font = "750 34px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
+    if (stepKey === "menu") {
+      drawPill(ctx, "Edit menu (demo)", 60, btnY, W - 120, 140, "rgba(30,122,74,1)", "#F3F5F4");
+      ctx.fillStyle = "rgba(166,176,170,0.8)";
+      ctx.font = "500 32px Inter, system-ui, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Click to edit →", px + pillW / 2, py + 54);
+      ctx.fillText(`"Update in seconds" → try it.`, W / 2, btnY + 200);
     }
 
-    tex.needsUpdate = true;
+    if (stepKey === "edit") {
+      drawPill(ctx, "Save & publish", 60, btnY, W - 120, 140, "rgba(30,122,74,1)", "#F3F5F4");
+
+      // slider
+      const sx = 90;
+      const sy = btnY - 220;
+      const sw = W - 180;
+      const sh = 18;
+      ctx.fillStyle = "rgba(166,176,170,0.25)";
+      drawRoundedRect(ctx, sx, sy, sw, sh, 12);
+      ctx.fill();
+
+      // knob
+      const k = Math.min(1, Math.max(0, stepT));
+      const knobX = sx + sw * k;
+      ctx.fillStyle = "#1E7A4A";
+      drawRoundedRect(ctx, sx, sy, sw * k, sh, 12);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(knobX, sy + sh / 2, 22, 0, Math.PI * 2);
+      ctx.fillStyle = "#F3F5F4";
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(166,176,170,0.8)";
+      ctx.font = "500 34px Inter, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Price slider", sx, sy - 30);
+    }
+
+    if (stepKey === "sync") {
+      drawPill(ctx, "Syncing…", 60, btnY, W - 120, 140, "rgba(16,22,20,1)", "#F3F5F4");
+      // progress bar
+      const px = 90;
+      const py = btnY - 210;
+      const pw = W - 180;
+      const ph = 18;
+      ctx.fillStyle = "rgba(166,176,170,0.22)";
+      drawRoundedRect(ctx, px, py, pw, ph, 12);
+      ctx.fill();
+
+      const prog = Math.min(1, Math.max(0, stepT));
+      ctx.fillStyle = "rgba(30,122,74,0.95)";
+      drawRoundedRect(ctx, px, py, pw * prog, ph, 12);
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(166,176,170,0.8)";
+      ctx.font = "500 34px Inter, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Publishing changes…", W / 2, py - 30);
+    }
+
+    if (stepKey === "live") {
+      drawPill(ctx, "Replay demo", 60, btnY, W - 120, 140, "rgba(16,22,20,1)", "#F3F5F4");
+      // toast
+      const tx = 60;
+      const ty = btnY - 240;
+      const tw = W - 120;
+      const th = 110;
+      ctx.fillStyle = "rgba(30,122,74,0.18)";
+      ctx.strokeStyle = "rgba(30,122,74,0.35)";
+      ctx.lineWidth = 3;
+      drawRoundedRect(ctx, tx, ty, tw, th, 28);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#F3F5F4";
+      ctx.font = "650 40px Inter, system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Menu updated.", tx + 32, ty + 58);
+
+      ctx.fillStyle = "rgba(166,176,170,0.9)";
+      ctx.font = "500 34px Inter, system-ui, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText("QR unchanged", tx + tw - 32, ty + 58);
+    }
+
+    // hover affordance
+    if (hoveringScreen) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(30,122,74,0.9)";
+      ctx.lineWidth = 10;
+      drawRoundedRect(ctx, 26, 26, W - 52, H - 52, 60);
+      ctx.stroke();
+      drawPill(ctx, "Click to advance →", W - 440, 160, 380, 90, "rgba(16,22,20,0.92)", "#F3F5F4");
+      ctx.restore();
+    }
+
+    screen.tex.needsUpdate = true;
   }
 
-  // Auto-fit + find screen mesh + apply texture
+  function getStepByTime(t) {
+    // manual override
+    if (manualStepRef.current) {
+      return manualStepRef.current;
+    }
+
+    const lt = t % total;
+    let acc = 0;
+    for (const s of timeline) {
+      if (lt >= acc && lt < acc + s.dur) {
+        return { key: s.key, t: (lt - acc) / s.dur };
+      }
+      acc += s.dur;
+    }
+    return { key: "menu", t: 0 };
+  }
+
+  // Find screen mesh once and replace its material with MeshBasicMaterial
   useEffect(() => {
     if (!scene) return;
 
-    if (onLoaded) onLoaded();
+    console.log("📱 iPhoneModel mounted, finding screen mesh…");
 
-    console.log("✅ GLB model loaded successfully:", url);
-    console.log("📦 Scene children count:", scene.children.length);
-
-    // Auto-fit: center + scale to a target height
-    const box = new THREE.Box3().setFromObject(scene);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
-    scene.position.x += -center.x;
-    scene.position.y += -center.y;
-    scene.position.z += -center.z;
-    const targetHeight = 1.15;
-    const scale = targetHeight / (size.y || 1);
-    scene.scale.setScalar(scale);
-
-    // Find screen mesh
-    console.log("📱 iPhoneModel mounted, finding screen mesh...");
-
-    let screenFound = null;
-
+    let found = null;
     scene.traverse((obj) => {
-      if (!obj.isMesh) return;
-      const matName = (obj.material?.name || "").toLowerCase();
-      const name = (obj.name || "").toLowerCase();
-      if (!screenFound && (matName.includes("display") || name.includes("screen") || name.includes("display"))) {
-        screenFound = obj;
+      if (!obj?.isMesh) return;
+      const matName = obj.material?.name?.toLowerCase?.() ?? "";
+      const name = (obj.name ?? "").toLowerCase();
+
+      // Your model: Object_55 material "Display"
+      if (matName.includes("display") || name.includes("screen") || name.includes("display")) {
+        found = obj;
       }
-      obj.castShadow = true;
-      obj.receiveShadow = true;
     });
 
-    if (!screenFound) {
-      console.warn("⚠️ No screen mesh found.");
+    if (!found) {
+      const names = [];
+      scene.traverse((o) => {
+        if (o.isMesh) names.push({ name: o.name, mat: o.material?.name });
+      });
+      console.warn("⚠️ Screen mesh not found. Mesh table:");
+      console.table(names);
       return;
     }
 
-    screenMeshRef.current = screenFound;
+    screenMeshRef.current = found;
+    console.log("✅ Using screen mesh:", found.name, "| material:", found.material?.name);
 
-    console.log(`✅ Found screen mesh: "${screenFound.name}" | material: "${screenFound.material?.name}"`);
+    // Hard override to guarantee visibility
+    found.material = new THREE.MeshBasicMaterial({
+      map: screen.tex,
+      toneMapped: false,
+    });
+    found.material.needsUpdate = true;
 
-    // Apply texture (and make it pop)
-    const applyScreen = (mesh) => {
-      const mat = mesh.material;
-      if (!mat) return;
+    // nicer shadows on rest
+    scene.traverse((o) => {
+      if (o.isMesh) {
+        o.castShadow = true;
+        o.receiveShadow = true;
+      }
+    });
 
-      // Make the texture visible no matter what the model material is
-      mat.map = tex;
-      mat.emissiveMap = tex;
-      mat.emissive = new THREE.Color("#ffffff");
-      mat.emissiveIntensity = 1.25;
+    onLoaded?.();
+  }, [scene, screen.tex, onLoaded]);
 
-      // Remove "dark glass" behavior that hides UI
-      mat.metalness = 0;
-      mat.roughness = 0.25;
+  // Cursor + hover
+  useEffect(() => {
+    document.body.style.cursor = hoveringScreen ? "pointer" : "";
+    return () => (document.body.style.cursor = "");
+  }, [hoveringScreen]);
 
-      // IMPORTANT: prevents tonemapping from dimming emissive UI
-      mat.toneMapped = false;
-
-      // Make sure base color doesn't tint the UI
-      if (mat.color) mat.color.set("#ffffff");
-      mat.needsUpdate = true;
-    };
-
-    if (screenFound) {
-      applyScreen(screenFound);
-    }
-
-    // First paint
-    drawScreen();
-  }, [scene, url, onLoaded, tex]);
-
-  // Animate demo loop + subtle phone motion
-  useFrame((state, delta) => {
-    // time for drawing flash / UI
-    demo.current._now = state.clock.elapsedTime;
-
+  // Animate screen every frame
+  useFrame((state) => {
     if (!group.current) return;
 
-    // premium float motion
+    // subtle float rotation
     const t = state.clock.getElapsedTime();
     group.current.rotation.y = Math.sin(t * 0.35) * 0.25;
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
 
-    // demo loop timing
-    const d = demo.current;
-    d.t += delta;
+    // pause window after click
+    const now = state.clock.getElapsedTime();
+    if (now < pauseUntilRef.current) return;
 
-    const now = state.clock.elapsedTime;
-    const manual = now < d.manualUntil;
-
-    // Still allow syncing progress even during manual pause
-    if (d.step === 2) {
-      d.progress = clamp(d.progress + delta * 0.65, 0, 1);
-    }
-
-    // Auto-advance only if not in manual pause
-    if (!manual) {
-      if (d.step === 0 && d.t > 2.2) { d.step = 1; d.t = 0; }
-      else if (d.step === 1 && d.t > 2.2) { d.step = 2; d.t = 0; d.progress = 0; }
-      else if (d.step === 2 && d.t > 1.8) { d.step = 3; d.t = 0; }
-      else if (d.step === 3 && d.t > 2.0) {
-        d.step = 0; d.t = 0;
-        // little "edit" bump so the replay feels fresh
-        d.price = d.price === 16.99 ? 15.99 : 16.99;
-        d.nextPrice = d.price + 1.5;
-      }
-
-      // Edit step fake slider motion
-      if (d.step === 1) {
-        const wave = (Math.sin(d.t * 1.6) * 0.5 + 0.5); // 0..1
-        d.price = 16.2 + wave * 2.1; // 16.2..18.3
-        d.nextPrice = d.price + 0.2;
-      }
-    }
-
-    // repaint every frame (cheap enough at this size)
-    drawScreen();
+    const step = getStepByTime(now);
+    drawUI(step.key, step.t);
   });
+
+  // Screen click handler: advance step instantly + pause auto-loop briefly
+  const onPointerDown = (e) => {
+    // Only if the clicked mesh is the screen OR inside it
+    const hit = e.object;
+    const screenMesh = screenMeshRef.current;
+    if (!screenMesh) return;
+
+    const isScreen =
+      hit === screenMesh || hit?.uuid === screenMesh?.uuid || hit?.parent === screenMesh;
+
+    if (!isScreen) return;
+
+    e.stopPropagation();
+
+    const now = e.clock?.getElapsedTime?.() ?? performance.now() / 1000;
+    pauseUntilRef.current = now + 2.2;
+
+    // advance manual step
+    const current = manualStepRef.current ?? getStepByTime(now);
+    const order = ["menu", "edit", "sync", "live"];
+    const idx = Math.max(0, order.indexOf(current.key));
+    const nextKey = order[(idx + 1) % order.length];
+    manualStepRef.current = { key: nextKey, t: 0 };
+
+    // clear manual override after pause
+    setTimeout(() => {
+      manualStepRef.current = null;
+    }, 2200);
+  };
 
   return (
     <group
@@ -351,42 +385,19 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
       position={[0.35, -0.15, 0]}
       rotation={[0.05, -0.55, 0.02]}
       scale={1.45}
+      onPointerDown={onPointerDown}
+      onPointerOver={(e) => {
+        // hover only when hovering screen mesh
+        if (!screenMeshRef.current) return;
+        if (e.object === screenMeshRef.current) setHoveringScreen(true);
+      }}
+      onPointerOut={() => setHoveringScreen(false)}
     >
-      <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.28}>
-        <primitive
-          object={scene}
-          onPointerOver={(e) => {
-            // Only highlight if the hovered mesh IS the screen mesh
-            if (screenMeshRef.current && (e.object === screenMeshRef.current || e.object.parent === screenMeshRef.current)) {
-              hovered.current = true;
-              document.body.style.cursor = "pointer";
-            }
-          }}
-          onPointerOut={() => {
-            hovered.current = false;
-            document.body.style.cursor = "default";
-          }}
-          onPointerMove={(e) => {
-            if (!screenMeshRef.current) return;
-            const isScreen = e.object === screenMeshRef.current || e.object.parent === screenMeshRef.current;
-            hovered.current = isScreen;
-            document.body.style.cursor = isScreen ? "pointer" : "default";
-          }}
-          onPointerDown={(e) => {
-            if (!screenMeshRef.current) return;
-
-            const isScreen = e.object === screenMeshRef.current || e.object.parent === screenMeshRef.current;
-            if (!isScreen) return;
-
-            e.stopPropagation();
-            const now = e.clock.elapsedTime;
-            advanceStep(now);
-          }}
-        />
+      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
+        <primitive object={scene} />
       </Float>
     </group>
   );
 }
 
-// Preload the model
 useGLTF.preload("/models/scandish.glb");
