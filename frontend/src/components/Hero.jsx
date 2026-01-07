@@ -118,7 +118,7 @@ export default function Hero() {
                 <p className="text-[#A6B0AA]">Tap to view live demo</p>
               </Link>
             </div>
-            
+
             {/* Clickable Phone Frame with Menu Preview (Desktop) */}
             <Link
               to="/menu/demo"
@@ -163,7 +163,7 @@ export default function Hero() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Hover indicator */}
               <div className="absolute inset-0 flex items-center justify-center bg-[#1E7A4A]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem] pointer-events-none">
                 <span className="text-[#1E7A4A] font-semibold">Click to view live demo →</span>

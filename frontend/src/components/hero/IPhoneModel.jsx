@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import { Float, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
-export default function IPhoneModel({ url = "/models/iphone_17_pro.glb", onLoaded }) {
+export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) {
   const group = useRef(null);
   
   console.log("🔵 IPhoneModel component rendering, loading:", url);
@@ -65,62 +65,57 @@ export default function IPhoneModel({ url = "/models/iphone_17_pro.glb", onLoade
 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
 
-    // Try multiple common screen mesh names
-    const screenNames = ["Screen", "screen", "Display", "display", "Glass", "glass", "Front", "front", "LCD", "lcd", "Screen_0", "screen_0"];
-    let screenFound = false;
-
-    // First try getObjectByName (fastest)
-    for (const name of screenNames) {
-      const screen = scene.getObjectByName(name);
-      if (screen?.isMesh && screen.material) {
-        console.log(`✅ Found screen mesh: "${name}"`);
-        screen.material.map = screenTex;
-        screen.material.emissive = new THREE.Color("#ffffff");
-        screen.material.emissiveIntensity = 0.6;
-        screen.material.needsUpdate = true;
-        screenFound = true;
-        break;
-      }
+    // Based on GLTF: Screen_14 node contains Display material (material index 14)
+    // Try to find by node name first
+    const screenNode = scene.getObjectByName("Screen_14");
+    if (screenNode) {
+      console.log("✅ Found Screen_14 node");
+      screenNode.traverse((obj) => {
+        if (obj.isMesh && obj.material) {
+          const matName = obj.material.name || "";
+          if (matName.toLowerCase().includes("display")) {
+            console.log(`✅ Found display mesh: "${obj.name}" | material: "${matName}"`);
+            obj.material.map = screenTex;
+            obj.material.emissive = new THREE.Color("#ffffff");
+            obj.material.emissiveIntensity = 0.6;
+            obj.material.needsUpdate = true;
+          }
+        }
+      });
     }
 
-    // If not found, traverse and check names/materials
+    // Also try direct material name search
+    let screenFound = false;
+    scene.traverse((obj) => {
+      if (obj.isMesh && obj.material) {
+        const name = obj.name || "unnamed";
+        const matName = obj.material.name || "no material";
+        
+        // Check for Display material (from GLTF: material index 14 is "Display")
+        if (matName.toLowerCase().includes("display")) {
+          console.log(`✅ Found display mesh: "${name}" | material: "${matName}"`);
+          obj.material.map = screenTex;
+          obj.material.emissive = new THREE.Color("#ffffff");
+          obj.material.emissiveIntensity = 0.6;
+          obj.material.needsUpdate = true;
+          screenFound = true;
+        }
+      }
+    });
+
     if (!screenFound) {
+      console.warn("⚠️ No display mesh found. Logging all meshes:");
       const names = [];
       scene.traverse((obj) => {
         if (obj.isMesh) {
           const name = obj.name || "unnamed";
           const matName = obj.material?.name || "no material";
           names.push({ name, matName });
-
-          const nameLower = name.toLowerCase();
-          const matLower = matName.toLowerCase();
-
-          if (
-            nameLower.includes("screen") ||
-            nameLower.includes("display") ||
-            nameLower.includes("glass") ||
-            nameLower.includes("front") ||
-            nameLower.includes("lcd") ||
-            nameLower.includes("panel") ||
-            matLower.includes("screen") ||
-            matLower.includes("display") ||
-            matLower.includes("emissive")
-          ) {
-            console.log(`✅ Found screen mesh: "${name}" | material: "${matName}"`);
-            obj.material.map = screenTex;
-            obj.material.emissive = new THREE.Color("#ffffff");
-            obj.material.emissiveIntensity = 0.6;
-            obj.material.needsUpdate = true;
-            screenFound = true;
-          }
         }
       });
-
-      if (!screenFound) {
-        console.warn("⚠️ No screen mesh found. Available meshes:");
-        console.table(names);
-        console.log("💡 All mesh names:", names.map(n => n.name));
-      }
+      console.table(names);
+      console.log("💡 All mesh names:", names.map(n => n.name));
+      console.log("💡 All material names:", [...new Set(names.map(n => n.matName))]);
     }
 
     // Enhance other materials
@@ -153,4 +148,4 @@ export default function IPhoneModel({ url = "/models/iphone_17_pro.glb", onLoade
 }
 
 // Preload the model
-useGLTF.preload("/models/iphone_17_pro.glb");
+useGLTF.preload("/models/scandish.glb");
