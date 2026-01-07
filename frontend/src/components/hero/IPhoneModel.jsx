@@ -3,8 +3,9 @@ import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import { usePhoneDemoTexture } from "../../hooks/usePhoneDemoTexture.js";
 
-// Screen mesh is "Object_55" with material "Display" - we'll apply texture directly to it
-const SCREEN_MESH_NAME = "Object_55";
+// Screen mesh - we'll find it by geometry (flat/large, not glass/tint/mirror)
+// Fallback to Object_55 if geometry-based search fails
+const SCREEN_MESH_NAME_FALLBACK = "Object_55";
 
 export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const { scene } = useGLTF("/models/scandish.glb");
@@ -28,9 +29,9 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
     root.traverse((obj) => {
       if (obj.isMesh) {
-        // Find screen mesh (Object_55) - we'll apply texture directly to it
-        if (obj.name === SCREEN_MESH_NAME) {
-          foundScreenMesh = obj;
+        // Fallback: find screen mesh by name (Object_55) - but we'll use geometry-based selection instead
+        if (obj.name === SCREEN_MESH_NAME_FALLBACK) {
+          // Store as fallback, but prefer geometry-based selection
         }
         // Find glass layers
         const matName = obj.material?.name?.toLowerCase?.() ?? "";
@@ -212,7 +213,70 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       }
     });
 
-    // Compute screen area from Object_55 (for relative detection)
+    // First, find the actual visible screen surface by geometry (not by name)
+    // We'll use the top flat/large mesh that's NOT glass/tint/mirror
+    const screenCandidates = [];
+    
+    root.traverse((obj) => {
+      if (obj.isMesh) {
+        const name = (obj.name ?? "").toLowerCase();
+        const matName = (obj.material?.name ?? "").toLowerCase();
+        
+        // Skip obvious blockers (glass/tint/mirror) and notch/camera
+        const isBlocker = (
+          matName.includes("glass") || name.includes("glass") ||
+          matName.includes("tint") || name.includes("tint") ||
+          matName.includes("mirror") || name.includes("mirror") ||
+          matName.includes("filter") || name.includes("filter") ||
+          name.includes("camera") || name.includes("notch") || name.includes("speaker")
+        );
+        
+        if (isBlocker) return;
+        
+        // Compute geometry metrics
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const area = size.x * size.y;
+        const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
+        
+        // Screen candidates: very flat and reasonably large
+        if (flat > 8 && area > 0.0001) {
+          screenCandidates.push({
+            mesh: obj,
+            name: obj.name,
+            material: matName || (obj.material?.name ?? "unknown"),
+            area: area,
+            flat: flat,
+            score: flat * area // Higher = more likely to be screen
+          });
+        }
+      }
+    });
+    
+    // Sort by screen-likeness and pick the top candidate (this is the visible surface)
+    screenCandidates.sort((a, b) => b.score - a.score);
+    
+    console.log("🔍 SCREEN CANDIDATES (geometry-based):");
+    screenCandidates.slice(0, 5).forEach((c, idx) => {
+      console.log(`  ${idx + 1}. ${c.name} | material: ${c.material} | area: ${c.area.toFixed(6)} | flat: ${c.flat.toFixed(1)} | score: ${c.score.toFixed(2)}`);
+    });
+    
+    // Use top candidate as screen (or fallback to Object_55 by name)
+    if (screenCandidates.length > 0) {
+      foundScreenMesh = screenCandidates[0].mesh;
+      console.log("✅ Selected screen mesh (geometry-based):", foundScreenMesh.name, "| material:", screenCandidates[0].material);
+    } else {
+      // Fallback: find by name
+      root.traverse((obj) => {
+        if (obj.isMesh && obj.name === SCREEN_MESH_NAME_FALLBACK) {
+          foundScreenMesh = obj;
+          console.log("✅ Selected screen mesh (fallback by name):", foundScreenMesh.name);
+        }
+      });
+    }
+    
+    // Compute screen area from selected mesh (for relative cover detection)
     let screenArea = 0;
     if (foundScreenMesh) {
       foundScreenMesh.geometry.computeBoundingBox();
@@ -221,19 +285,19 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         const screenSize = new THREE.Vector3();
         screenBbox.getSize(screenSize);
         screenArea = screenSize.x * screenSize.y;
-        console.log("📐 Screen (Object_55) area:", screenArea.toFixed(6));
+        console.log("📐 Screen area:", screenArea.toFixed(6));
       }
     }
-    
+
     // Also check ALL meshes for potential blockers (not just glass-labeled ones)
     // This catches meshes with generic names (Object_XX) that don't match keywords
     const flatLargeMeshes = []; // For area-based detection
-    
+
     root.traverse((obj) => {
       if (obj.isMesh && obj !== foundScreenMesh) {
         const name = (obj.name ?? "").toLowerCase();
         const matName = obj.material?.name?.toLowerCase?.() ?? "";
-        
+
         // Check if this looks like a front display blocker (keyword-based)
         const looksLikeBlocker = (
           (name.includes("mirror") && name.includes("filter")) ||
@@ -242,12 +306,12 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           (matName.includes("tint") && matName.includes("back")) ||
           (matName.includes("mirror") && matName.includes("filter"))
         );
-        
+
         if (looksLikeBlocker) {
           console.log("🚫 HIDING ADDITIONAL BLOCKER (keyword):", obj.name, "| material:", matName);
           obj.visible = false;
         }
-        
+
         // Collect flat/large meshes for area-based detection (relative to screen)
         // These are likely cover meshes with generic names (Object_54, Object_52, etc.)
         const box = new THREE.Box3().setFromObject(obj);
@@ -255,17 +319,36 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         box.getSize(size);
         const area = size.x * size.y;
         const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
-        
+
         // RELATIVE detection: area should be 0.6x to 1.6x screen area (cover is similar size)
         // Reduced flatness threshold (some covers have slight curvature/bevel)
+        // BUT: Don't hide frame/aluminum/plastic - those are phone parts, not blockers
         const areaRatio = screenArea > 0 ? area / screenArea : 0;
+        const isBlockerMaterial = (
+          matName.includes("glass") || name.includes("glass") ||
+          matName.includes("tint") || name.includes("tint") ||
+          matName.includes("mirror") || name.includes("mirror") ||
+          matName.includes("filter") || name.includes("filter") ||
+          matName.includes("screencover") || name.includes("screencover") ||
+          matName.includes("frontglass") || name.includes("frontglass") ||
+          matName.includes("displayglass") || name.includes("displayglass")
+        );
+        const isPhonePart = (
+          matName.includes("frame") || name.includes("frame") ||
+          matName.includes("aluminum") || name.includes("aluminum") ||
+          matName.includes("plastic") || name.includes("plastic") ||
+          matName.includes("antena") || name.includes("antena")
+        );
+        
         const isCoverCandidate = (
           flat > 8 && // Reduced from 15 (more forgiving for slight curvature)
           areaRatio >= 0.6 && // At least 60% of screen area
           areaRatio <= 1.6 && // At most 160% of screen area (slightly larger is OK)
+          isBlockerMaterial && // Only hide actual blockers (glass/tint/mirror)
+          !isPhonePart && // Don't hide phone parts (frame/aluminum/plastic)
           obj !== foundScreenMesh
         );
-        
+
         if (isCoverCandidate) {
           flatLargeMeshes.push({
             mesh: obj,
@@ -279,11 +362,11 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         }
       }
     });
-    
+
     // Sort by "screen-likeness" (flat × area ratio) and hide the top candidates
     // These are likely cover meshes sitting in front of Object_55
     flatLargeMeshes.sort((a, b) => b.score - a.score);
-    
+
     console.log("🔍 FLAT/LARGE MESHES (potential cover blockers, relative to Object_55):");
     if (flatLargeMeshes.length === 0) {
       console.log("  ⚠️ No candidates found. Check thresholds or screen area calculation.");
@@ -292,13 +375,13 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         console.log(`  ${idx + 1}. ${m.name} | material: ${m.material} | area: ${m.area.toFixed(6)} | areaRatio: ${m.areaRatio.toFixed(2)}x | flat: ${m.flat.toFixed(1)} | score: ${m.score.toFixed(2)}`);
       });
     }
-    
+
     // Hide the top 3-5 flat/large meshes (these are likely cover meshes)
-    // Object_55 should be in this list but we skip it
+    // Skip the selected screen mesh
     const coverCandidates = flatLargeMeshes
-      .filter(m => m.mesh.name !== SCREEN_MESH_NAME)
+      .filter(m => m.mesh !== foundScreenMesh)
       .slice(0, 5); // Top 5 candidates
-    
+
     coverCandidates.forEach((candidate) => {
       console.log("🚫 HIDING COVER CANDIDATE (flat/area):", candidate.name, "| material:", candidate.material, "| areaRatio:", candidate.areaRatio.toFixed(2) + "x");
       candidate.mesh.visible = false;
