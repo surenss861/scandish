@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useGLTF } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { usePhoneDemoTexture } from "../../hooks/usePhoneDemoTexture.js";
 
-// Screen mesh is "Object_55" with material "Display"
+// Screen mesh is "Object_55" with material "Display" - we'll use it for positioning, then hide it
 const SCREEN_MESH_NAME = "Object_55";
 
 function applyTextureToMesh(mesh, tex) {
@@ -55,6 +56,8 @@ function applyTextureToMesh(mesh, tex) {
 export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const { scene } = useGLTF("/models/scandish.glb");
   const screenTex = usePhoneDemoTexture();
+  const screenPlaneRef = useRef(null);
+  const screenAnchorRef = useRef(null);
 
   // CRITICAL: Don't clone - modify the actual scene instance that gets rendered
   // Cloning was causing us to modify the wrong object
@@ -95,7 +98,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       );
   }, [root]);
 
-  // Apply texture to the hard-targeted screen mesh
+  // OPTION A: Replace GLB screen with our own plane (bulletproof approach)
   useEffect(() => {
     if (!screenTex || !screenTex.image) {
       console.warn("⚠️ Screen texture not ready yet");
@@ -108,7 +111,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
     root.traverse((obj) => {
       if (obj.isMesh) {
-        // Find screen mesh (Object_55 with Display material)
+        // Find screen mesh (Object_55) - we'll use it for positioning, then hide it
         if (obj.name === SCREEN_MESH_NAME) {
           screenMesh = obj;
         }
@@ -126,99 +129,128 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       }
     });
 
-    if (!screenMesh) {
-      console.warn(
-        "⚠️ Screen mesh not found. Name =",
-        SCREEN_MESH_NAME,
-        "\nCheck console above for available mesh names."
-      );
-      return;
+    // Hide ALL original screen-related meshes
+    if (screenMesh) {
+      console.log("🚫 Hiding original screen mesh:", screenMesh.name);
+      screenMesh.visible = false;
     }
-
-    const box = new THREE.Box3().setFromObject(screenMesh);
-    const size = new THREE.Vector3();
-    box.getSize(size);
     
-    console.log("✅ Found screen mesh:", screenMesh.name);
-    console.log("📐 Screen mesh bounds:", size.x.toFixed(3), "x", size.y.toFixed(3), "x", size.z.toFixed(3));
-    console.log("🎨 Texture dimensions:", screenTex.image.width, "x", screenTex.image.height);
-    console.log("🔍 Found filter/overlay meshes:", filterMeshes.map(m => m.name));
-    
-    // STEP 1: Hide ALL filter/overlay meshes that might block the screen
     filterMeshes.forEach((filter) => {
       console.log("🚫 Hiding filter/overlay mesh:", filter.name);
       filter.visible = false;
     });
     
-    // STEP 2: Hide front glass layers completely
     glassMeshes.forEach((glass) => {
       const name = (glass.name ?? "").toLowerCase();
       const matName = glass.material?.name?.toLowerCase?.() ?? "";
       if (name.includes("14") || name.includes("53") || name.includes("front") || 
-          name.includes("tint") || matName.includes("tint") || matName.includes("mirror")) {
-        console.log("🚫 Hiding front glass:", glass.name);
+          name.includes("tint") || matName.includes("tint") || matName.includes("mirror") ||
+          name.includes("display") || matName.includes("display")) {
+        console.log("🚫 Hiding front glass/display:", glass.name);
         glass.visible = false;
       } else {
         // Other glass - make very transparent
         if (Array.isArray(glass.material)) {
           glass.material.forEach((mat) => {
             if (mat) {
-              mat.opacity = 0.3;
+              mat.opacity = 0.2;
               mat.transparent = true;
               mat.needsUpdate = true;
             }
           });
         } else {
-          glass.material.opacity = 0.3;
+          glass.material.opacity = 0.2;
           glass.material.transparent = true;
           glass.material.needsUpdate = true;
         }
       }
     });
+
+    // Create anchor group that follows the screen mesh's world position
+    if (screenMesh && screenAnchorRef.current) {
+      screenMesh.updateWorldMatrix(true, false);
+      const worldPos = new THREE.Vector3();
+      const worldQuat = new THREE.Quaternion();
+      const worldScale = new THREE.Vector3();
+      screenMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
+      
+      // Get screen mesh size for plane sizing
+      const box = new THREE.Box3().setFromObject(screenMesh);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      
+      console.log("📐 Original screen mesh size:", size.x.toFixed(3), "x", size.y.toFixed(3));
+      console.log("📍 Screen world position:", worldPos.x.toFixed(3), worldPos.y.toFixed(3), worldPos.z.toFixed(3));
+      
+      // Position anchor at screen location
+      screenAnchorRef.current.position.copy(worldPos);
+      screenAnchorRef.current.quaternion.copy(worldQuat);
+      screenAnchorRef.current.scale.copy(worldScale);
+      
+      // Create plane geometry matching screen aspect ratio (iPhone 17 Pro: ~9:19.5)
+      // Use the screen mesh's dimensions as reference
+      const planeWidth = size.x * 0.95; // Slightly inset
+      const planeHeight = size.y * 0.95;
+      
+      if (screenPlaneRef.current) {
+        screenPlaneRef.current.geometry.dispose();
+        screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+        
+        // Apply texture to our plane
+        screenTex.flipY = false;
+        screenTex.needsUpdate = true;
+        screenTex.wrapS = THREE.ClampToEdgeWrapping;
+        screenTex.wrapT = THREE.ClampToEdgeWrapping;
+        screenTex.minFilter = THREE.LinearFilter;
+        screenTex.magFilter = THREE.LinearFilter;
+        screenTex.generateMipmaps = false;
+        screenTex.colorSpace = THREE.SRGBColorSpace;
+        
+        const material = new THREE.MeshBasicMaterial({
+          map: screenTex,
+          color: new THREE.Color(0xffffff),
+          toneMapped: false,
+          transparent: false,
+        });
+        
+        screenPlaneRef.current.material = material;
+        screenPlaneRef.current.material.needsUpdate = true;
+        screenPlaneRef.current.visible = true;
+        
+        // Slight Z offset to avoid z-fighting
+        screenPlaneRef.current.position.z += 0.001;
+        
+        console.log("✅ Created replacement screen plane:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
+      }
+    }
+
+    onLoaded?.();
+  }, [root, screenTex, onLoaded]);
+  
+  // Keep plane aligned with screen mesh (in case phone rotates)
+  useFrame(() => {
+    if (!screenAnchorRef.current || !screenPlaneRef.current) return;
     
-    // STEP 3: Apply bright test material first (prove we can change the screen)
-    // Temporarily use a bright neon color to verify material replacement works
-    const testMaterial = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(0x00ff00), // Bright green
-      toneMapped: false,
+    // Find screen mesh again to track its position
+    let screenMesh = null;
+    root.traverse((obj) => {
+      if (obj.isMesh && obj.name === SCREEN_MESH_NAME) {
+        screenMesh = obj;
+      }
     });
     
-    if (Array.isArray(screenMesh.material)) {
-      // Multi-material: replace all slots
-      screenMesh.material = screenMesh.material.map(() => testMaterial);
-      console.log("✅ Applied test material to multi-material mesh (", screenMesh.material.length, "slots)");
-    } else {
-      screenMesh.material = testMaterial;
-      console.log("✅ Applied test material to single-material mesh");
+    if (screenMesh) {
+      screenMesh.updateWorldMatrix(true, false);
+      const worldPos = new THREE.Vector3();
+      const worldQuat = new THREE.Quaternion();
+      const worldScale = new THREE.Vector3();
+      screenMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
+      
+      screenAnchorRef.current.position.copy(worldPos);
+      screenAnchorRef.current.quaternion.copy(worldQuat);
+      screenAnchorRef.current.scale.copy(worldScale);
     }
-    
-    screenMesh.visible = true;
-    screenMesh.material.needsUpdate = true;
-    
-    // After 2 seconds, switch to actual texture
-    const timeout = setTimeout(() => {
-      console.log("🎨 Switching from test material to texture...");
-      applyTextureToMesh(screenMesh, screenTex);
-      
-      // Force material update
-      if (screenMesh.material) {
-        if (Array.isArray(screenMesh.material)) {
-          screenMesh.material.forEach(mat => {
-            if (mat) {
-              mat.needsUpdate = true;
-              if (mat.map) mat.map.needsUpdate = true;
-            }
-          });
-        } else {
-          screenMesh.material.needsUpdate = true;
-          if (screenMesh.material.map) screenMesh.material.map.needsUpdate = true;
-        }
-      }
-      
-      console.log("✅ Texture applied, material type:", screenMesh.material?.type || "array");
-    }, 2000);
-    
-    return () => clearTimeout(timeout);
+  });
 
     // Hide holder/stand meshes
     const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
@@ -235,7 +267,24 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     onLoaded?.();
   }, [root, screenTex, onLoaded]);
 
-  return <primitive object={root} scale={heroScale} />;
+  return (
+    <group>
+      {/* Original iPhone model (screen hidden, body visible) */}
+      <primitive object={root} scale={heroScale} />
+      
+      {/* Replacement screen plane - positioned where original screen was */}
+      <group ref={screenAnchorRef}>
+        <mesh ref={screenPlaneRef}>
+          {/* Geometry will be set in useEffect based on screen mesh size */}
+          <planeGeometry args={[1, 2]} />
+          <meshBasicMaterial 
+            color={0x00ff00} // Temporary green until texture loads
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
 }
 
 useGLTF.preload("/models/scandish.glb");
