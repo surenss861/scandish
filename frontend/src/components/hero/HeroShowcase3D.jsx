@@ -3,27 +3,16 @@ import { Canvas } from "@react-three/fiber";
 import { ContactShadows } from "@react-three/drei";
 import IPhoneModel from "./IPhoneModel.jsx";
 
-export default function HeroShowcase3D() {
+export default function HeroShowcase3D({ className = "" }) {
   const [canvasReady, setCanvasReady] = useState(false);
   const [modelReady, setModelReady] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    console.log("🚀 HeroShowcase3D component mounted");
   }, []);
 
-  // Don't render on mobile
-  if (isMobile) {
-    return null;
-  }
-
   return (
-    <div className="w-full h-full">
+    <div className={`w-full h-full ${className}`}>
       <Canvas
         dpr={[1, 1.5]}
         camera={{ position: [0, 0.05, 2.25], fov: 38 }}
@@ -33,12 +22,9 @@ export default function HeroShowcase3D() {
           alpha: true
         }}
         shadows
-        onCreated={(state) => {
-          console.log("🎨 Canvas created successfully!", state);
+        onCreated={() => {
+          console.log("🎨 Canvas created successfully!");
           setCanvasReady(true);
-        }}
-        onError={(error) => {
-          console.error("❌ Canvas error:", error);
         }}
       >
         <ambientLight intensity={0.7} />
@@ -58,8 +44,8 @@ export default function HeroShowcase3D() {
       </Canvas>
 
       {import.meta.env.DEV && canvasReady && (
-        <div className="absolute top-4 left-4 bg-[#1E7A4A] text-[#F3F5F4] px-3 py-1 rounded text-xs font-bold z-[9999]">
-          Canvas: READY {modelReady ? "| Model: READY" : "| Model: LOADING..."}
+        <div className="absolute top-4 left-4 bg-[#1E7A4A] text-[#F3F5F4] px-3 py-1 rounded text-xs font-bold z-[50]">
+          Canvas: {canvasReady ? "READY" : "LOADING"} {modelReady ? "| Model: READY" : "| Model: LOADING..."}
         </div>
       )}
     </div>

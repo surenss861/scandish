@@ -88,7 +88,7 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Right: iPhone 3D Demo */}
+          {/* Right: Floating iPhone Stage (Desktop) */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -106,29 +106,30 @@ export default function Hero() {
               </Link>
             </div>
 
-            {/* Right: 3D Phone Showcase (Desktop) */}
-            <Link
-              to="/menu/demo"
-              className="relative hidden lg:block h-[460px] w-full rounded-[2.5rem] border border-[#1B2420] bg-[#0B0F0E]/40 overflow-hidden shadow-2xl group"
-            >
+            {/* Desktop: Floating iPhone Stage */}
+            <div className="relative hidden lg:block h-[520px] w-full overflow-visible">
               {/* Spotlight */}
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_55%_40%,rgba(30,122,74,0.18),transparent_58%)]" />
 
-              {/* 3D Canvas lives INSIDE this card - allow pointer events for interactive demo */}
-              <div className="absolute inset-0">
+              {/* Soft vignette */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#0B0F0E]/55 via-transparent to-[#0B0F0E]/55" />
+
+              {/* Subtle glass haze (optional) */}
+              <div className="pointer-events-none absolute inset-0 backdrop-blur-[1px]" />
+
+              {/* 3D phone (interactive screen) */}
+              <div className="absolute inset-0 pointer-events-auto">
                 <HeroShowcase3D />
               </div>
 
-              {/* Subtle glass overlay to match site */}
-              <div className="absolute inset-0 bg-gradient-to-b from-[#0B0F0E]/20 via-transparent to-[#0B0F0E]/45" />
-
-              {/* Hover CTA */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="px-5 py-2 rounded-full bg-[#101614]/80 border border-[#1B2420] text-[#F3F5F4] font-semibold">
-                  Click to view live demo →
-                </div>
-              </div>
-            </Link>
+              {/* Separate "open demo" CTA so screen stays interactive */}
+              <Link
+                to="/menu/demo"
+                className="absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full border border-[#1B2420] bg-[#0B0F0E]/60 px-4 py-2 text-sm font-semibold text-[#F3F5F4] hover:border-[#1E7A4A] hover:bg-[#101614] transition"
+              >
+                Open live demo <span className="opacity-70">→</span>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </div>
