@@ -16,6 +16,12 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
       onLoaded();
       console.log("✅ GLB model loaded successfully:", url);
       console.log("📦 Scene children count:", scene.children.length);
+      
+      // Log bounding box to understand model size
+      const box = new THREE.Box3().setFromObject(scene);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      console.log("📐 Model bounding box:", { size, center });
     }
   }, [scene, url, onLoaded]);
 
@@ -68,6 +74,8 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     // Based on GLTF: Screen_14 node contains Display material (material index 14)
     // Try to find by node name first
     const screenNode = scene.getObjectByName("Screen_14");
+    let screenFound = false;
+    
     if (screenNode) {
       console.log("✅ Found Screen_14 node");
       screenNode.traverse((obj) => {
@@ -79,29 +87,31 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
             obj.material.emissive = new THREE.Color("#ffffff");
             obj.material.emissiveIntensity = 0.6;
             obj.material.needsUpdate = true;
+            screenFound = true;
           }
         }
       });
     }
 
     // Also try direct material name search
-    let screenFound = false;
-    scene.traverse((obj) => {
-      if (obj.isMesh && obj.material) {
-        const name = obj.name || "unnamed";
-        const matName = obj.material.name || "no material";
-        
-        // Check for Display material (from GLTF: material index 14 is "Display")
-        if (matName.toLowerCase().includes("display")) {
-          console.log(`✅ Found display mesh: "${name}" | material: "${matName}"`);
-          obj.material.map = screenTex;
-          obj.material.emissive = new THREE.Color("#ffffff");
-          obj.material.emissiveIntensity = 0.6;
-          obj.material.needsUpdate = true;
-          screenFound = true;
+    if (!screenFound) {
+      scene.traverse((obj) => {
+        if (obj.isMesh && obj.material) {
+          const name = obj.name || "unnamed";
+          const matName = obj.material.name || "no material";
+          
+          // Check for Display material (from GLTF: material index 14 is "Display")
+          if (matName.toLowerCase().includes("display")) {
+            console.log(`✅ Found display mesh: "${name}" | material: "${matName}"`);
+            obj.material.map = screenTex;
+            obj.material.emissive = new THREE.Color("#ffffff");
+            obj.material.emissiveIntensity = 0.6;
+            obj.material.needsUpdate = true;
+            screenFound = true;
+          }
         }
-      }
-    });
+      });
+    }
 
     if (!screenFound) {
       console.warn("⚠️ No display mesh found. Logging all meshes:");
@@ -114,8 +124,6 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
         }
       });
       console.table(names);
-      console.log("💡 All mesh names:", names.map(n => n.name));
-      console.log("💡 All material names:", [...new Set(names.map(n => n.matName))]);
     }
 
     // Enhance other materials
@@ -123,9 +131,12 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
       if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
-        if (obj.material && !screenFound) {
-          obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
-          obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
+        if (obj.material) {
+          // Don't override display material
+          if (!obj.material.name?.toLowerCase().includes("display")) {
+            obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
+            obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
+          }
         }
       }
     });
@@ -138,8 +149,11 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
 
+  // Calculate scale based on model size (model is ~0.07 units tall, scale to ~2 units)
+  const scale = 30; // Much larger scale to make it visible
+
   return (
-    <group ref={group} position={[0, -0.2, 0]} scale={1.2}>
+    <group ref={group} position={[0, 0, 0]} scale={scale}>
       <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
         <primitive object={scene} />
       </Float>
