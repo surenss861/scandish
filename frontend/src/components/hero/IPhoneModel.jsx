@@ -219,6 +219,13 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     tex.needsUpdate = true;
   }
 
+  // Make sure texture updates every frame
+  useEffect(() => {
+    if (tex) {
+      tex.needsUpdate = true;
+    }
+  });
+
   // Auto-fit + find screen mesh + apply texture
   useEffect(() => {
     if (!scene) return;
@@ -267,11 +274,30 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     console.log(`✅ Found screen mesh: "${screenFound.name}" | material: "${screenFound.material?.name}"`);
 
     // Apply texture (and make it pop)
-    if (screenFound.material) {
-      screenFound.material.map = tex;
-      screenFound.material.emissive = new THREE.Color("#ffffff");
-      screenFound.material.emissiveIntensity = 0.75;
-      screenFound.material.needsUpdate = true;
+    const applyScreen = (mesh) => {
+      const mat = mesh.material;
+      if (!mat) return;
+
+      // Make the texture visible no matter what the model material is
+      mat.map = tex;
+      mat.emissiveMap = tex;
+      mat.emissive = new THREE.Color("#ffffff");
+      mat.emissiveIntensity = 1.25;
+
+      // Remove "dark glass" behavior that hides UI
+      mat.metalness = 0;
+      mat.roughness = 0.25;
+
+      // IMPORTANT: prevents tonemapping from dimming emissive UI
+      mat.toneMapped = false;
+
+      // Make sure base color doesn't tint the UI
+      if (mat.color) mat.color.set("#ffffff");
+      mat.needsUpdate = true;
+    };
+
+    if (screenFound) {
+      applyScreen(screenFound);
     }
 
     // First paint
