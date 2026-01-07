@@ -24,61 +24,38 @@ export function useHeroPin() {
         anticipatePin: 1,
       });
 
-      // Rotate iPhone during scroll
-      const phoneGroup = scope.current.querySelector("[data-phone-3d]");
-      if (phoneGroup) {
-        gsap.to(phoneGroup, {
-          rotationY: 15,
-          rotationX: -5,
+      // Animate value props in
+      const valueProps = scope.current.querySelectorAll("[data-value-prop]");
+      if (valueProps.length > 0) {
+        gsap.from(valueProps, {
+          opacity: 0,
+          y: 20,
+          duration: 0.6,
+          stagger: 0.1,
           scrollTrigger: {
             trigger: scope.current,
-            start: "top top",
-            end: "+=100vh",
-            scrub: 1,
+            start: "top 60%",
           },
         });
       }
 
-      // Animate value props in
-      gsap.from("[data-value-prop]", {
-        opacity: 0,
-        y: 20,
-        duration: 0.6,
-        stagger: 0.1,
-        scrollTrigger: {
-          trigger: scope.current,
-          start: "top 60%",
-        },
-      });
-
-      // Screen swap animation (PDF → Scandish)
-      const screenSwap = gsap.timeline({
-        scrollTrigger: {
-          trigger: scope.current,
-          start: "top top",
-          end: "+=100vh",
-          scrub: 1,
-        },
-      });
-
-      screenSwap
-        .to("[data-pdf-screen]", { opacity: 0, scale: 0.9 }, 0.3)
-        .to("[data-scandish-screen]", { opacity: 1, scale: 1 }, 0.3);
-
-      // CTA pulse at end
-      gsap.to("[data-cta-pulse]", {
-        scale: 1.05,
-        repeat: -1,
-        yoyo: true,
-        duration: 2,
-        ease: "power2.inOut",
-        scrollTrigger: {
-          trigger: scope.current,
-          start: "bottom top",
-          end: "bottom center",
-          toggleActions: "play none none reverse",
-        },
-      });
+      // CTA pulse at end of pin
+      const ctaPulse = scope.current.querySelector("[data-cta-pulse]");
+      if (ctaPulse) {
+        gsap.to(ctaPulse, {
+          scale: 1.05,
+          repeat: -1,
+          yoyo: true,
+          duration: 2,
+          ease: "power2.inOut",
+          scrollTrigger: {
+            trigger: scope.current,
+            start: "bottom top",
+            end: "bottom center",
+            toggleActions: "play none none reverse",
+          },
+        });
+      }
     }, scope);
 
     return () => ctx.revert();
@@ -86,4 +63,3 @@ export function useHeroPin() {
 
   return scope;
 }
-
