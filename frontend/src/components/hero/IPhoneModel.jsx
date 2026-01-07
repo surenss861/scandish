@@ -162,9 +162,9 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     ctx.textAlign = "center";
     const label =
       demo.current.step === 0 ? "Edit menu (demo)" :
-      demo.current.step === 1 ? "Publish update" :
-      demo.current.step === 2 ? "Syncing…" :
-      "Replay demo";
+        demo.current.step === 1 ? "Publish update" :
+          demo.current.step === 2 ? "Syncing…" :
+            "Replay demo";
     ctx.fillText(label, W / 2, btnY + 104);
 
     // syncing progress bar
@@ -180,7 +180,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     ctx.fillStyle = "#A6B0AA";
     ctx.font = "600 30px Inter, system-ui, -apple-system, Segoe UI, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(""Update in seconds" — watch it happen.", W / 2, H - 140);
+    ctx.fillText('"Update in seconds" — watch it happen.', W / 2, H - 140);
 
     // QR unchanged badge
     ctx.textAlign = "right";

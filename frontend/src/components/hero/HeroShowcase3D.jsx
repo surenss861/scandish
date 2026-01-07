@@ -17,9 +17,9 @@ export default function HeroShowcase3D({ className = "" }) {
         style={{ touchAction: "none" }}
         dpr={[1, 1.75]}
         camera={{ position: [0.0, 0.05, 2.25], fov: 38 }}
-        gl={{ 
-          antialias: true, 
-          powerPreference: "high-performance", 
+        gl={{
+          antialias: true,
+          powerPreference: "high-performance",
           alpha: true
         }}
         shadows
