@@ -103,7 +103,8 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         foundScreenMesh.material.needsUpdate = true;
         foundScreenMesh.visible = true;
         console.log("🧪 NEON TEST: Object_55 should be bright green. If not, it's covered.");
-        return; // Exit early during test
+        console.log("🧪 Check the phone screen - is it neon green or still grey?");
+        // Don't return early - let the blocker detection run too
       }
 
       // Configure texture for GLTF mesh (flipY = false for GLTF)
@@ -211,6 +212,19 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       }
     });
 
+    // Compute screen area from Object_55 (for relative detection)
+    let screenArea = 0;
+    if (foundScreenMesh) {
+      foundScreenMesh.geometry.computeBoundingBox();
+      const screenBbox = foundScreenMesh.geometry.boundingBox;
+      if (screenBbox) {
+        const screenSize = new THREE.Vector3();
+        screenBbox.getSize(screenSize);
+        screenArea = screenSize.x * screenSize.y;
+        console.log("📐 Screen (Object_55) area:", screenArea.toFixed(6));
+      }
+    }
+    
     // Also check ALL meshes for potential blockers (not just glass-labeled ones)
     // This catches meshes with generic names (Object_XX) that don't match keywords
     const flatLargeMeshes = []; // For area-based detection
@@ -234,7 +248,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           obj.visible = false;
         }
         
-        // Also collect flat/large meshes for area-based detection
+        // Collect flat/large meshes for area-based detection (relative to screen)
         // These are likely cover meshes with generic names (Object_54, Object_52, etc.)
         const box = new THREE.Box3().setFromObject(obj);
         const size = new THREE.Vector3();
@@ -242,28 +256,42 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         const area = size.x * size.y;
         const flat = Math.max(size.x, size.y) / Math.max(1e-6, size.z);
         
-        // If it's very flat and large (like a screen cover), it's a candidate
-        if (flat > 15 && area > 0.2 && obj !== foundScreenMesh) {
+        // RELATIVE detection: area should be 0.6x to 1.6x screen area (cover is similar size)
+        // Reduced flatness threshold (some covers have slight curvature/bevel)
+        const areaRatio = screenArea > 0 ? area / screenArea : 0;
+        const isCoverCandidate = (
+          flat > 8 && // Reduced from 15 (more forgiving for slight curvature)
+          areaRatio >= 0.6 && // At least 60% of screen area
+          areaRatio <= 1.6 && // At most 160% of screen area (slightly larger is OK)
+          obj !== foundScreenMesh
+        );
+        
+        if (isCoverCandidate) {
           flatLargeMeshes.push({
             mesh: obj,
             name: obj.name,
             material: matName || (obj.material?.name ?? "unknown"),
             area: area,
+            areaRatio: areaRatio,
             flat: flat,
-            score: flat * area // Higher = more likely to be cover
+            score: flat * areaRatio // Higher = more likely to be cover
           });
         }
       }
     });
     
-    // Sort by "screen-likeness" (flat × area) and hide the top candidates
+    // Sort by "screen-likeness" (flat × area ratio) and hide the top candidates
     // These are likely cover meshes sitting in front of Object_55
     flatLargeMeshes.sort((a, b) => b.score - a.score);
     
-    console.log("🔍 FLAT/LARGE MESHES (potential cover blockers):");
-    flatLargeMeshes.slice(0, 10).forEach((m, idx) => {
-      console.log(`  ${idx + 1}. ${m.name} | material: ${m.material} | area: ${m.area.toFixed(3)} | flat: ${m.flat.toFixed(1)} | score: ${m.score.toFixed(2)}`);
-    });
+    console.log("🔍 FLAT/LARGE MESHES (potential cover blockers, relative to Object_55):");
+    if (flatLargeMeshes.length === 0) {
+      console.log("  ⚠️ No candidates found. Check thresholds or screen area calculation.");
+    } else {
+      flatLargeMeshes.slice(0, 10).forEach((m, idx) => {
+        console.log(`  ${idx + 1}. ${m.name} | material: ${m.material} | area: ${m.area.toFixed(6)} | areaRatio: ${m.areaRatio.toFixed(2)}x | flat: ${m.flat.toFixed(1)} | score: ${m.score.toFixed(2)}`);
+      });
+    }
     
     // Hide the top 3-5 flat/large meshes (these are likely cover meshes)
     // Object_55 should be in this list but we skip it
@@ -272,7 +300,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       .slice(0, 5); // Top 5 candidates
     
     coverCandidates.forEach((candidate) => {
-      console.log("🚫 HIDING COVER CANDIDATE (flat/area):", candidate.name, "| material:", candidate.material);
+      console.log("🚫 HIDING COVER CANDIDATE (flat/area):", candidate.name, "| material:", candidate.material, "| areaRatio:", candidate.areaRatio.toFixed(2) + "x");
       candidate.mesh.visible = false;
     });
 
