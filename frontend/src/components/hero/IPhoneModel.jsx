@@ -84,6 +84,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       });
     }
 
+
     // ✅ Apply texture directly to original screen mesh (no replacement plane)
     if (foundScreenMesh) {
       console.log("✅ Found screen mesh:", foundScreenMesh.name);
@@ -210,7 +211,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       const isBlocker = blockerNames.some(blocker =>
         name.includes(blocker) || matName.includes(blocker)
       );
-      
+
       // If it's a cover glass (like Object_54 with frame material), make it transparent instead of hiding
       const isCoverGlass = (
         (name.includes("54") || name.includes("frame")) &&
