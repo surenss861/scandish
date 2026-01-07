@@ -1,12 +1,22 @@
 import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Float, useGLTF, useTexture } from "@react-three/drei";
+import { Float, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   const group = useRef(null);
-  const { scene } = useGLTF(url);
   
+  // Load the GLB model with error handling
+  let scene;
+  try {
+    const result = useGLTF(url);
+    scene = result.scene;
+    console.log("✅ GLB model loaded successfully:", url);
+  } catch (error) {
+    console.error("❌ Failed to load GLB model:", error);
+    return null;
+  }
+
   // Create screen texture from canvas (menu preview)
   const canvas = document.createElement("canvas");
   canvas.width = 1170;
@@ -46,12 +56,17 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   screenTex.colorSpace = THREE.SRGBColorSpace;
 
   useEffect(() => {
+    if (!scene) {
+      console.error("❌ Scene is null, cannot apply screen texture");
+      return;
+    }
+
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
-    
+
     // Try multiple common screen mesh names
-    const screenNames = ["Screen", "screen", "Display", "display", "Glass", "glass", "Front", "front", "LCD", "lcd"];
+    const screenNames = ["Screen", "screen", "Display", "display", "Glass", "glass", "Front", "front", "LCD", "lcd", "Screen_0", "screen_0"];
     let screenFound = false;
-    
+
     // First try getObjectByName (fastest)
     for (const name of screenNames) {
       const screen = scene.getObjectByName(name);
@@ -65,7 +80,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
         break;
       }
     }
-    
+
     // If not found, traverse and check names/materials
     if (!screenFound) {
       const names = [];
@@ -74,16 +89,17 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
           const name = obj.name || "unnamed";
           const matName = obj.material?.name || "no material";
           names.push({ name, matName });
-          
+
           const nameLower = name.toLowerCase();
           const matLower = matName.toLowerCase();
-          
+
           if (
             nameLower.includes("screen") ||
             nameLower.includes("display") ||
             nameLower.includes("glass") ||
             nameLower.includes("front") ||
             nameLower.includes("lcd") ||
+            nameLower.includes("panel") ||
             matLower.includes("screen") ||
             matLower.includes("display") ||
             matLower.includes("emissive")
@@ -97,19 +113,20 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
           }
         }
       });
-      
+
       if (!screenFound) {
         console.warn("⚠️ No screen mesh found. Available meshes:");
         console.table(names);
+        console.log("💡 All mesh names:", names.map(n => n.name));
       }
     }
-    
+
     // Enhance other materials
     scene.traverse((obj) => {
-      if (obj.isMesh && !screenFound) {
+      if (obj.isMesh) {
         obj.castShadow = true;
         obj.receiveShadow = true;
-        if (obj.material) {
+        if (obj.material && !screenFound) {
           obj.material.metalness = Math.min(0.9, obj.material.metalness ?? 0.4);
           obj.material.roughness = Math.max(0.2, obj.material.roughness ?? 0.35);
         }
@@ -123,6 +140,8 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     group.current.rotation.y = Math.sin(t * 0.35) * 0.25;
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
+
+  if (!scene) return null;
 
   return (
     <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
