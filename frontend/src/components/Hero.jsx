@@ -15,7 +15,7 @@ export default function Hero() {
       {/* 3D BACKGROUND */}
       <div className="pointer-events-none absolute inset-0 z-0">
         <HeroBackground3D />
-        
+
         {/* Extra haze so text stays readable */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_40%_35%,rgba(22,163,74,0.18),transparent_55%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/60" />
