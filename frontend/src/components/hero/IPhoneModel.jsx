@@ -75,19 +75,54 @@ function worldCenter(mesh) {
 }
 
 function setCoverGlassLook(mesh) {
-  // make it visible as a sheen but never blocking
-  const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  mats.forEach((mat) => {
-    if (!mat) return;
-    mat.transparent = true;
-    mat.opacity = 0.08;
-    mat.depthWrite = false;
-    mat.depthTest = true;
-    mat.side = FORCE_DOUBLE_SIDE ? THREE.DoubleSide : mat.side;
-    mat.needsUpdate = true;
+  // Replace with a simple sheen that cannot occlude the screen
+  const sheen = new THREE.MeshBasicMaterial({
+    color: "#ffffff",
+    transparent: true,
+    opacity: 0.06,
+    depthWrite: false,
+    depthTest: true,
+    toneMapped: false,
+    side: FORCE_DOUBLE_SIDE ? THREE.DoubleSide : THREE.FrontSide,
   });
 
+  // Optional: make it feel like a highlight instead of a tint
+  sheen.blending = THREE.AdditiveBlending;
+
+  mesh.material = sheen;
   mesh.renderOrder = 998;
+}
+
+function ensureUVs(mesh) {
+  const geom = mesh.geometry;
+  if (!geom) return;
+
+  // If UVs exist, we're good
+  if (geom.attributes.uv && geom.attributes.uv.count > 0) {
+    console.log("✅ UVs already exist on", mesh.name);
+    return;
+  }
+
+  // Generate planar UVs from bounding box (good enough for phone screens)
+  console.log("⚠️ Generating UVs for", mesh.name, "(missing or empty)");
+  geom.computeBoundingBox();
+  const bb = geom.boundingBox;
+  const pos = geom.attributes.position;
+
+  const sizeX = bb.max.x - bb.min.x || 1;
+  const sizeY = bb.max.y - bb.min.y || 1;
+
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const x = (pos.getX(i) - bb.min.x) / sizeX;
+    const y = (pos.getY(i) - bb.min.y) / sizeY;
+    uv[i * 2 + 0] = x;
+    uv[i * 2 + 1] = 1 - y; // flip so it matches typical UI orientation
+  }
+
+  geom.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+  geom.attributes.uv.needsUpdate = true;
+  console.log("✅ Generated UVs for", mesh.name);
 }
 
 function setScreenMaterial(mesh, demoTexture) {
@@ -116,7 +151,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const { camera } = useThree();
   const { scene: gltfScene } = useGLTF("/models/scandish.glb");
   const demoTexture = usePhoneDemoTexture();
-  
+
   // CRITICAL: Don't clone - modify the actual scene instance that gets rendered
   const scene = useMemo(() => gltfScene, [gltfScene]);
 
@@ -218,7 +253,8 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         .forEach((m) => (m.visible = true));
     }
 
-    // 6) Apply the demo material to the actual visible surface
+    // 6) Ensure UVs exist, then apply the demo material to the actual visible surface
+    ensureUVs(visibleSurface);
     setScreenMaterial(visibleSurface, demoTexture);
 
     // if the fallback screen is different, don't let it fight for pixels
