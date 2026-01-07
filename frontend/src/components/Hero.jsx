@@ -13,7 +13,7 @@ export default function Hero() {
   return (
     <section
       ref={pinRef}
-      className="relative overflow-hidden bg-[#0B0F0E] min-h-screen"
+      className="relative overflow-visible bg-[#0B0F0E] min-h-screen"
     >
       {/* 3D BACKGROUND */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-visible">
