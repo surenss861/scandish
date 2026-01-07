@@ -58,6 +58,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const screenTex = usePhoneDemoTexture();
   const screenPlaneRef = useRef(null);
   const screenBloomRef = useRef(null);
+  const fakeGlassRef = useRef(null);
   const screenAnchorRef = useRef(null);
   const screenMeshRef = useRef(null);
 
@@ -192,11 +193,11 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     glassMeshes.forEach((glass) => {
       const name = (glass.name ?? "").toLowerCase();
       const matName = glass.material?.name?.toLowerCase?.() ?? "";
-      
+
       // Hide GLB front glass/tint that covers the whole screen (brittle materials)
       if (name.includes("14") || name.includes("53") || name.includes("front") ||
-          name.includes("tint") || matName.includes("tint") ||
-          (name.includes("glass") && (name.includes("front") || name.includes("display")))) {
+        name.includes("tint") || matName.includes("tint") ||
+        (name.includes("glass") && (name.includes("front") || name.includes("display")))) {
         console.log("🚫 Hiding GLB front glass/tint (brittle):", glass.name);
         glass.visible = false; // Hide - we'll add our own glass overlay
       } else {
@@ -278,6 +279,12 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       screenBloomRef.current.geometry.dispose();
       screenBloomRef.current.geometry = new THREE.PlaneGeometry(planeW * 1.04, planeH * 1.04);
     }
+    
+    // Update fake glass overlay geometry (slightly larger than screen)
+    if (fakeGlassRef.current) {
+      fakeGlassRef.current.geometry.dispose();
+      fakeGlassRef.current.geometry = new THREE.PlaneGeometry(planeW * 1.01, planeH * 1.01);
+    }
 
     // Apply texture to our plane - CRITICAL: flipY = true for PlaneGeometry (opposite of GLTF mesh)
     screenTex.flipY = true; // <-- DIFFERENT from GLTF screen mesh
@@ -302,7 +309,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     screenPlaneRef.current.material.needsUpdate = true;
     screenPlaneRef.current.visible = true;
     screenPlaneRef.current.renderOrder = 997; // Render before fake glass (998) and notch (1000)
-    
+
     // Update fake glass overlay geometry (slightly larger than screen)
     if (fakeGlassRef.current) {
       fakeGlassRef.current.geometry.dispose();
@@ -371,7 +378,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       {/* Replacement screen plane - positioned where original screen was */}
       <group ref={screenAnchorRef}>
         {/* Soft OLED bloom behind screen */}
-        <mesh ref={screenBloomRef} position={[0, 0, -0.015]} renderOrder={996}>
+        <mesh ref={screenBloomRef} position={[0, 0, -0.01]} renderOrder={996}>
           <planeGeometry args={[1, 2]} />
           <meshBasicMaterial
             color="#1E7A4A"
@@ -381,12 +388,26 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           />
         </mesh>
 
+        {/* Screen plane with demo texture */}
         <mesh ref={screenPlaneRef}>
           {/* Geometry will be set in useEffect based on screen mesh size */}
           <planeGeometry args={[1, 2]} />
           <meshBasicMaterial
             color={0x00ff00} // Temporary green until texture loads
             toneMapped={false}
+          />
+        </mesh>
+        
+        {/* Fake glass overlay (our own, not brittle GLB glass) */}
+        <mesh ref={fakeGlassRef} position={[0, 0, 0.008]} renderOrder={998}>
+          <planeGeometry args={[1, 2]} />
+          <meshStandardMaterial
+            color="#ffffff"
+            transparent
+            opacity={0.08}
+            metalness={0.4}
+            roughness={0.05}
+            depthWrite={false}
           />
         </mesh>
       </group>
