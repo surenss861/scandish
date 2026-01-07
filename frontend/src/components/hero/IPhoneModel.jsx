@@ -130,8 +130,8 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         }
         // Find notch/camera/speaker meshes (keep visible for realism)
         if (objName.includes("camera") || objName.includes("notch") || objName.includes("speaker") ||
-            matName.includes("camera") || matName.includes("sapphire") || 
-            (objName.includes("filter") && (objName.includes("camera") || objName.includes("37") || objName.includes("18") || objName.includes("28") || objName.includes("7")))) {
+          matName.includes("camera") || matName.includes("sapphire") ||
+          (objName.includes("filter") && (objName.includes("camera") || objName.includes("37") || objName.includes("18") || objName.includes("28") || objName.includes("7")))) {
           notchMeshes.push(obj);
         }
         // Find filter/overlay meshes (tint, mirror - these can block screen)
@@ -157,8 +157,8 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       const name = (filter.name ?? "").toLowerCase();
       const matName = filter.material?.name?.toLowerCase?.() ?? "";
       // Hide tint/mirror filters, but keep camera-related ones
-      if (name.includes("tint") || matName.includes("tint") || 
-          (name.includes("mirror") && !name.includes("camera") && !name.includes("sapphire"))) {
+      if (name.includes("tint") || matName.includes("tint") ||
+        (name.includes("mirror") && !name.includes("camera") && !name.includes("sapphire"))) {
         console.log("🚫 Hiding tint/mirror filter:", filter.name);
         filter.visible = false;
       }
@@ -187,36 +187,18 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       notch.renderOrder = 1000; // Render last (on top)
     });
 
-    // Front glass - keep visible but make realistic (subtle, not blocking)
+    // Front glass - HIDE GLB front glass/tint (they're brittle and block screen)
+    // We'll add our own fake glass overlay instead
     glassMeshes.forEach((glass) => {
       const name = (glass.name ?? "").toLowerCase();
       const matName = glass.material?.name?.toLowerCase?.() ?? "";
       
-      // Front glass layers (Object_14, Object_53) - keep visible but very transparent
+      // Hide GLB front glass/tint that covers the whole screen (brittle materials)
       if (name.includes("14") || name.includes("53") || name.includes("front") ||
-          (name.includes("glass") && (name.includes("front") || matName.includes("glass")))) {
-        console.log("✅ Keeping front glass visible (realistic):", glass.name);
-        glass.visible = true;
-        
-        if (Array.isArray(glass.material)) {
-          glass.material.forEach((mat) => {
-            if (mat) {
-              mat.opacity = 0.15; // Very transparent - just a subtle sheen
-              mat.transparent = true;
-              // Keep some reflectivity for realism
-              if (mat.metalness !== undefined) mat.metalness = 0.3;
-              if (mat.roughness !== undefined) mat.roughness = 0.1;
-              mat.needsUpdate = true;
-            }
-          });
-        } else {
-          glass.material.opacity = 0.15;
-          glass.material.transparent = true;
-          if (glass.material.metalness !== undefined) glass.material.metalness = 0.3;
-          if (glass.material.roughness !== undefined) glass.material.roughness = 0.1;
-          glass.material.needsUpdate = true;
-        }
-        glass.renderOrder = 998; // Render after screen (screen is 999, but we want glass on top)
+          name.includes("tint") || matName.includes("tint") ||
+          (name.includes("glass") && (name.includes("front") || name.includes("display")))) {
+        console.log("🚫 Hiding GLB front glass/tint (brittle):", glass.name);
+        glass.visible = false; // Hide - we'll add our own glass overlay
       } else {
         // Other glass (bezel, back) - make transparent
         if (Array.isArray(glass.material)) {
@@ -287,9 +269,9 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     screenPlaneRef.current.geometry.dispose();
     screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeW, planeH);
 
-    // Z offset - push slightly INTO phone (behind glass, in front of frame)
-    // Negative Z moves it back into the phone for realistic layering
-    screenPlaneRef.current.position.set(0, 0, -0.008);
+    // Z offset - slightly forward (toward camera) but still behind our fake glass overlay
+    // Small positive offset ensures it's visible and in front of phone body
+    screenPlaneRef.current.position.set(0, 0, 0.003);
 
     // Also update bloom plane geometry (slightly larger) - set after plane is ready
     if (screenBloomRef.current) {
@@ -319,7 +301,13 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     screenPlaneRef.current.material = material;
     screenPlaneRef.current.material.needsUpdate = true;
     screenPlaneRef.current.visible = true;
-    screenPlaneRef.current.renderOrder = 997; // Render before glass (998) and notch (1000)
+    screenPlaneRef.current.renderOrder = 997; // Render before fake glass (998) and notch (1000)
+    
+    // Update fake glass overlay geometry (slightly larger than screen)
+    if (fakeGlassRef.current) {
+      fakeGlassRef.current.geometry.dispose();
+      fakeGlassRef.current.geometry = new THREE.PlaneGeometry(planeW * 1.01, planeH * 1.01);
+    }
 
     console.log("✅ Created replacement screen plane:", planeW.toFixed(3), "x", planeH.toFixed(3));
 
