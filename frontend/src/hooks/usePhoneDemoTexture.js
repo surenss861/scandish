@@ -4,8 +4,11 @@ import * as THREE from "three";
 export function usePhoneDemoTexture() {
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = 900;
-    c.height = 1950;
+    // iPhone 17 Pro screen resolution (approximate)
+    // Standard iPhone aspect ratio: ~9:19.5 (390x844 points, but we need higher res for crisp display)
+    // Using a resolution that matches iPhone screen density
+    c.width = 1170;  // 390 * 3 (3x retina)
+    c.height = 2532; // 844 * 3 (matches iPhone 17 Pro resolution)
     return c;
   }, []);
 
@@ -58,8 +61,8 @@ export function usePhoneDemoTexture() {
 
       // Top bar - much brighter, fills full width
       ctx.fillStyle = "#1F2522";
-      ctx.fillRect(0, 0, canvas.width, 200); // Full width top bar
-      roundRect(ctx, 70, 120, canvas.width - 140, 170, 36);
+      ctx.fillRect(0, 0, W, 200); // Full width top bar
+      roundRect(ctx, 70, 120, W - 140, 170, 36);
       ctx.fill();
 
       ctx.fillStyle = "#FFFFFF"; // Pure white for max contrast
@@ -67,6 +70,7 @@ export function usePhoneDemoTexture() {
       ctx.fillText("Demo Restaurant", 120, 235);
 
       // Menu cards - 3 big items, MAXIMUM contrast, reads in 0.5s
+      // Scale everything proportionally to canvas size
       const items = [
         ["Margherita Pizza", step === "live" ? "$14.99" : "$16.99"], // OBVIOUS price change
         ["Caesar Salad", "$12.99"],
@@ -80,7 +84,7 @@ export function usePhoneDemoTexture() {
           ? "rgba(30,122,74,0.6)" // Highlight changed prices
           : "rgba(30,122,74,0.25)";
         ctx.lineWidth = 3;
-        roundRect(ctx, 80, y, canvas.width - 160, 180, 48);
+        roundRect(ctx, 80, y, W - 160, 180, 48);
         ctx.fill();
         ctx.stroke();
 
@@ -92,7 +96,7 @@ export function usePhoneDemoTexture() {
         // Price - bright green, even larger
         ctx.fillStyle = "#1E7A4A";
         ctx.font = "900 56px Inter, system-ui";
-        ctx.fillText(price, canvas.width - 280, y + 115);
+        ctx.fillText(price, W - 280, y + 115);
 
         y += 220;
       }
@@ -109,7 +113,7 @@ export function usePhoneDemoTexture() {
       // Edit step slider
       if (step === "edit") {
         ctx.fillStyle = "rgba(255,255,255,0.1)";
-        roundRect(ctx, 120, 1380, canvas.width - 240, 260, 54);
+        roundRect(ctx, 120, 1380, W - 240, 260, 54);
         ctx.fill();
 
         ctx.fillStyle = "#F3F5F4";
@@ -118,18 +122,18 @@ export function usePhoneDemoTexture() {
 
         // Slider track
         ctx.fillStyle = "rgba(255,255,255,0.2)";
-        roundRect(ctx, 180, 1535, canvas.width - 360, 20, 20);
+        roundRect(ctx, 180, 1535, W - 360, 20, 20);
         ctx.fill();
 
         // Slider value anim
         const p = 0.2 + 0.6 * local;
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, 180, 1535, (canvas.width - 360) * p, 20, 20);
+        roundRect(ctx, 180, 1535, (W - 360) * p, 20, 20);
         ctx.fill();
 
         // Knob
         ctx.beginPath();
-        ctx.arc(180 + (canvas.width - 360) * p, 1545, 24, 0, Math.PI * 2);
+        ctx.arc(180 + (W - 360) * p, 1545, 24, 0, Math.PI * 2);
         ctx.fillStyle = "#F3F5F4";
         ctx.fill();
       }
@@ -137,7 +141,7 @@ export function usePhoneDemoTexture() {
       // Syncing step with progress bar
       if (step === "sync") {
         ctx.fillStyle = "rgba(255,255,255,0.1)";
-        roundRect(ctx, 120, 1380, canvas.width - 240, 220, 54);
+        roundRect(ctx, 120, 1380, W - 240, 220, 54);
         ctx.fill();
 
         ctx.fillStyle = "#F3F5F4";
@@ -146,12 +150,12 @@ export function usePhoneDemoTexture() {
 
         // Progress bar track
         ctx.fillStyle = "rgba(255,255,255,0.2)";
-        roundRect(ctx, 180, 1520, canvas.width - 360, 18, 18);
+        roundRect(ctx, 180, 1520, W - 360, 18, 18);
         ctx.fill();
 
         // Progress bar fill - bright green
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, 180, 1520, (canvas.width - 360) * local, 18, 18);
+        roundRect(ctx, 180, 1520, (W - 360) * local, 18, 18);
         ctx.fill();
       }
 
@@ -167,7 +171,7 @@ export function usePhoneDemoTexture() {
         ctx.fillText("Live in seconds ✓", 180, 1510);
 
         // "Live" badge - EXTREMELY OBVIOUS, bigger, glowing
-        const badgeX = canvas.width - 260;
+        const badgeX = W - 260;
         const badgeY = 120;
         const badgeW = 190;
         const badgeH = 100;
@@ -189,29 +193,29 @@ export function usePhoneDemoTexture() {
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "900 50px Inter, system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("LIVE", canvas.width - 165, 175);
+        ctx.fillText("LIVE", W - 165, 175);
         ctx.textAlign = "left";
       } else {
         // "Preview" badge when not live
         ctx.fillStyle = "rgba(166,176,170,0.3)";
-        roundRect(ctx, canvas.width - 220, 140, 150, 80, 40);
+        roundRect(ctx, W - 220, 140, 150, 80, 40);
         ctx.fill();
 
         ctx.fillStyle = "rgba(166,176,170,0.8)";
         ctx.font = "600 38px Inter, system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("Preview", canvas.width - 145, 185);
+        ctx.fillText("Preview", W - 145, 185);
         ctx.textAlign = "left";
       }
 
       // "QR unchanged" badge
       ctx.fillStyle = "rgba(255,255,255,0.08)";
-      roundRect(ctx, canvas.width - 360, canvas.height - 190, 260, 90, 45);
+      roundRect(ctx, W - 360, H - 190, 260, 90, 45);
       ctx.fill();
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.font = "700 34px Inter, system-ui";
       ctx.textAlign = "right";
-      ctx.fillText("QR unchanged", canvas.width - 330, canvas.height - 130);
+      ctx.fillText("QR unchanged", W - 330, H - 130);
       ctx.textAlign = "left";
 
       // Screen edge emissive illusion - always visible, stronger when live
@@ -219,13 +223,13 @@ export function usePhoneDemoTexture() {
       const glowIntensity = step === "live" ? 0.25 : 0.08;
       ctx.strokeStyle = `rgba(30,122,74,${glowIntensity})`;
       ctx.lineWidth = step === "live" ? 12 : 6;
-      roundRect(ctx, 25, 95, canvas.width - 50, canvas.height - 190, 50);
+      roundRect(ctx, 25, 95, W - 50, H - 190, 50);
       ctx.stroke();
       
       // Inner glow (softer)
       ctx.strokeStyle = `rgba(30,122,74,${glowIntensity * 0.4})`;
       ctx.lineWidth = 4;
-      roundRect(ctx, 35, 105, canvas.width - 70, canvas.height - 210, 45);
+      roundRect(ctx, 35, 105, W - 70, H - 210, 45);
       ctx.stroke();
       ctx.restore();
 

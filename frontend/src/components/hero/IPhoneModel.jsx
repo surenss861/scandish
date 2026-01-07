@@ -9,6 +9,19 @@ const SCREEN_MESH_NAME = "Object_55";
 function applyTextureToMesh(mesh, tex) {
   tex.flipY = false;
   tex.needsUpdate = true;
+  
+  // Ensure texture fits the screen mesh properly
+  // Get the mesh bounding box to calculate proper UV mapping
+  const box = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  box.getSize(size);
+  
+  // Set texture to repeat/offset if needed to fit screen
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false; // Disable mipmaps for crisp text
 
   const makeMat = () =>
     new THREE.MeshBasicMaterial({
@@ -107,11 +120,11 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       if (glass.material) {
         const name = (glass.name ?? "").toLowerCase();
         const matName = glass.material?.name?.toLowerCase?.() ?? "";
-        
+
         // Hide front glass layers completely (Object_14, Object_53, Tint_back_glass, Mirror_filter)
         if (name.includes("glass") && (
-          name.includes("14") || 
-          name.includes("53") || 
+          name.includes("14") ||
+          name.includes("53") ||
           name.includes("front") ||
           name.includes("tint") ||
           matName.includes("tint") ||
