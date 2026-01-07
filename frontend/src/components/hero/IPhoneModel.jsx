@@ -6,16 +6,8 @@ import * as THREE from "three";
 export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   const group = useRef(null);
   
-  // Load the GLB model with error handling
-  let scene;
-  try {
-    const result = useGLTF(url);
-    scene = result.scene;
-    console.log("✅ GLB model loaded successfully:", url);
-  } catch (error) {
-    console.error("❌ Failed to load GLB model:", error);
-    return null;
-  }
+  // Load the GLB model (hooks must be called unconditionally)
+  const { scene } = useGLTF(url);
 
   // Create screen texture from canvas (menu preview)
   const canvas = document.createElement("canvas");
@@ -62,6 +54,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     }
 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
+    console.log("📦 GLB URL:", url);
 
     // Try multiple common screen mesh names
     const screenNames = ["Screen", "screen", "Display", "display", "Glass", "glass", "Front", "front", "LCD", "lcd", "Screen_0", "screen_0"];
@@ -132,7 +125,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
         }
       }
     });
-  }, [scene, screenTex]);
+  }, [scene, screenTex, url]);
 
   useFrame((state) => {
     if (!group.current) return;
@@ -140,8 +133,6 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     group.current.rotation.y = Math.sin(t * 0.35) * 0.25;
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
-
-  if (!scene) return null;
 
   return (
     <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
