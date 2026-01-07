@@ -29,12 +29,12 @@ export function usePhoneDemoTexture() {
 
       const t = (now - start) / 1000;
 
-      // timeline loop
+      // timeline loop - start on bright "menu" state
       const steps = [
-        { name: "menu", dur: 2.2 },
+        { name: "menu", dur: 3.0 }, // Longer menu state so it's the default
         { name: "edit", dur: 2.2 },
         { name: "sync", dur: 1.8 },
-        { name: "live", dur: 2.0 },
+        { name: "live", dur: 2.5 }, // Longer live state
       ];
       const total = steps.reduce((a, s) => a + s.dur, 0);
       let tt = t % total;
@@ -50,21 +50,21 @@ export function usePhoneDemoTexture() {
         tt -= s.dur;
       }
 
-      // Background - darker for OLED contrast
+      // Background - slightly lighter so it reads as "on"
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#0B0F0E";
+      ctx.fillStyle = "#0F1412"; // Slightly lighter than pure black
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Top bar - brighter
-      ctx.fillStyle = "#101614";
+      // Top bar - much brighter, more contrast
+      ctx.fillStyle = "#1A211E";
       roundRect(ctx, 70, 120, canvas.width - 140, 170, 36);
       ctx.fill();
 
-      ctx.fillStyle = "#F3F5F4"; // Bright white
-      ctx.font = "700 56px Inter, system-ui";
+      ctx.fillStyle = "#FFFFFF"; // Pure white for max contrast
+      ctx.font = "700 58px Inter, system-ui";
       ctx.fillText("Demo Restaurant", 120, 230);
 
-      // Menu cards with high contrast
+      // Menu cards with MAXIMUM contrast - big bright anchor elements
       const items = [
         ["Margherita Pizza", step === "live" ? "$14.99" : "$16.99"], // Price changes!
         ["Caesar Salad", "$12.99"],
@@ -72,19 +72,22 @@ export function usePhoneDemoTexture() {
       ];
       let y = 380;
       for (const [name, price] of items) {
-        // Card background - brighter
-        ctx.fillStyle = "#101614";
+        // Card background - much brighter white cards
+        ctx.fillStyle = "#1A211E";
+        ctx.strokeStyle = "rgba(30,122,74,0.3)";
+        ctx.lineWidth = 2;
         roundRect(ctx, 90, y, canvas.width - 180, 170, 44);
         ctx.fill();
+        ctx.stroke();
 
-        // Text - bright white
-        ctx.fillStyle = "#F3F5F4";
-        ctx.font = "600 46px Inter, system-ui";
+        // Text - pure white, bolder
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "700 48px Inter, system-ui";
         ctx.fillText(name, 140, y + 110);
 
-        // Price - bright green
+        // Price - bright green, larger
         ctx.fillStyle = "#1E7A4A";
-        ctx.font = "800 46px Inter, system-ui";
+        ctx.font = "900 50px Inter, system-ui";
         ctx.fillText(price, canvas.width - 300, y + 110);
 
         y += 210;
@@ -159,15 +162,29 @@ export function usePhoneDemoTexture() {
         ctx.font = "800 46px Inter, system-ui";
         ctx.fillText("Live in seconds ✓", 180, 1510);
 
-        // "Live" badge in top right - OBVIOUS
+        // "Live" badge in top right - BIGGER with subtle glow
+        const badgeX = canvas.width - 240;
+        const badgeY = 130;
+        const badgeW = 170;
+        const badgeH = 90;
+        
+        // Glow effect (outer glow)
+        ctx.shadowColor = "rgba(30,122,74,0.6)";
+        ctx.shadowBlur = 20;
         ctx.fillStyle = "#1E7A4A";
-        roundRect(ctx, canvas.width - 220, 140, 150, 80, 40);
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 45);
+        ctx.fill();
+        ctx.shadowBlur = 0; // Reset
+        
+        // Badge itself
+        ctx.fillStyle = "#1E7A4A";
+        roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 45);
         ctx.fill();
 
-        ctx.fillStyle = "#F3F5F4";
-        ctx.font = "800 42px Inter, system-ui";
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "900 46px Inter, system-ui";
         ctx.textAlign = "center";
-        ctx.fillText("LIVE", canvas.width - 145, 185);
+        ctx.fillText("LIVE", canvas.width - 155, 180);
         ctx.textAlign = "left";
       } else {
         // "Preview" badge when not live
@@ -192,15 +209,20 @@ export function usePhoneDemoTexture() {
       ctx.fillText("QR unchanged", canvas.width - 330, canvas.height - 130);
       ctx.textAlign = "left";
 
-      // Subtle screen glow effect (halo around screen edge)
-      if (step === "live") {
-        ctx.save();
-        ctx.strokeStyle = "rgba(30,122,74,0.15)";
-        ctx.lineWidth = 8;
-        roundRect(ctx, 30, 100, canvas.width - 60, canvas.height - 200, 50);
-        ctx.stroke();
-        ctx.restore();
-      }
+      // Screen edge emissive illusion - always visible, stronger when live
+      ctx.save();
+      const glowIntensity = step === "live" ? 0.25 : 0.08;
+      ctx.strokeStyle = `rgba(30,122,74,${glowIntensity})`;
+      ctx.lineWidth = step === "live" ? 12 : 6;
+      roundRect(ctx, 25, 95, canvas.width - 50, canvas.height - 190, 50);
+      ctx.stroke();
+      
+      // Inner glow (softer)
+      ctx.strokeStyle = `rgba(30,122,74,${glowIntensity * 0.4})`;
+      ctx.lineWidth = 4;
+      roundRect(ctx, 35, 105, canvas.width - 70, canvas.height - 210, 45);
+      ctx.stroke();
+      ctx.restore();
 
       texture.needsUpdate = true;
       raf = requestAnimationFrame(draw);

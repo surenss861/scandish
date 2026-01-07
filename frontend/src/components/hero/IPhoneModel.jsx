@@ -98,20 +98,25 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     console.log("✅ Applying texture to screen mesh:", screenMesh.name);
     applyTextureToMesh(screenMesh, screenTex);
 
-    // Make glass layers less opaque so screen shows through (more reduction)
+    // Make glass layers much less dominant - keep reflections mainly on bezel
     glassMeshes.forEach((glass) => {
       if (glass.material) {
         if (Array.isArray(glass.material)) {
           glass.material.forEach((mat) => {
             if (mat) {
-              mat.opacity = 0.75; // Reduced more (was 0.85)
+              mat.opacity = 0.65; // Reduced significantly (was 0.75)
               mat.transparent = true;
+              // Reduce metalness/roughness to make it less reflective
+              if (mat.metalness !== undefined) mat.metalness = Math.min(0.3, mat.metalness);
+              if (mat.roughness !== undefined) mat.roughness = Math.max(0.6, mat.roughness);
               mat.needsUpdate = true;
             }
           });
         } else {
-          glass.material.opacity = 0.75; // Reduced more
+          glass.material.opacity = 0.65; // Reduced significantly
           glass.material.transparent = true;
+          if (glass.material.metalness !== undefined) glass.material.metalness = Math.min(0.3, glass.material.metalness);
+          if (glass.material.roughness !== undefined) glass.material.roughness = Math.max(0.6, glass.material.roughness);
           glass.material.needsUpdate = true;
         }
       }

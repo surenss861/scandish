@@ -16,13 +16,13 @@ export default function Hero() {
       <div className="pointer-events-none absolute inset-0 z-0">
         <HeroBackground3D />
 
-        {/* Haze: stronger on left (text), lighter on right (product) */}
+        {/* Haze: stronger on left (text), minimal on right (product) */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_35%,rgba(22,163,74,0.22),transparent_50%)]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/15 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-black/12 to-black/15" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-black/60" />
         
-        {/* Localized spotlight behind phone (right side) */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[800px] bg-[radial-gradient(circle_at_center,rgba(30,122,74,0.12),transparent_70%)] pointer-events-none" />
+        {/* Localized spotlight behind phone (right side) - stronger */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[800px] bg-[radial-gradient(circle_at_center,rgba(30,122,74,0.15),transparent_70%)] pointer-events-none" />
       </div>
 
       {/* CONTENT */}

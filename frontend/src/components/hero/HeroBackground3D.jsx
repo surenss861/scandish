@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { Environment, Float } from "@react-three/drei";
+import { Environment, Float, Text } from "@react-three/drei";
 import * as THREE from "three";
 import IPhoneModel from "./IPhoneModel.jsx";
 
@@ -58,6 +58,38 @@ export default function HeroBackground3D() {
             opacity={0.15}
           />
         </mesh>
+        
+        {/* Floating callout near phone */}
+        <group position={[0.5, 0.3, 0]}>
+          <mesh>
+            <planeGeometry args={[0.65, 0.18]} />
+            <meshBasicMaterial 
+              color="#101614" 
+              transparent 
+              opacity={0.9}
+            />
+          </mesh>
+          <Text
+            position={[0, 0.02, 0.01]}
+            fontSize={0.045}
+            color="#F3F5F4"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={0.6}
+          >
+            Edit price → updates live
+          </Text>
+          <Text
+            position={[0, -0.03, 0.01]}
+            fontSize={0.032}
+            color="#A6B0AA"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={0.6}
+          >
+            QR unchanged
+          </Text>
+        </group>
       </Suspense>
     </Canvas>
   );
