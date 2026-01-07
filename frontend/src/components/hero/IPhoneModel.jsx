@@ -402,9 +402,9 @@ export default function IPhoneModel({
   return (
     <group
       ref={group}
-      position={[0.15, -0.25, 0]}
+      position={[0.8, -0.15, 0]}
       rotation={[0.05, -0.55, 0.02]}
-      scale={1.8}
+      scale={2.2}
       onPointerDown={onPointerDown}
       onPointerOver={(e) => {
         // hover only when hovering screen mesh

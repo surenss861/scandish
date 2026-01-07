@@ -6,7 +6,7 @@ import IPhoneModel from "./IPhoneModel.jsx";
 
 export default function HeroShowcase3D({ className = "" }) {
   return (
-    <div className={`w-full h-full pointer-events-auto ${className}`}>
+    <div className={`w-full h-full ${className}`}>
       <Canvas
         dpr={[1, 1.5]}
         camera={{ position: [0.2, 0.05, 2.35], fov: 34 }}

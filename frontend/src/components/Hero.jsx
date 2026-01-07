@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import HeroShowcase3D from "./hero/HeroShowcase3D.jsx";
 import { useHeroPin } from "../hooks/useHeroPin.js";
 
 export default function Hero() {
@@ -11,17 +12,9 @@ export default function Hero() {
       ref={pinRef}
       className="relative px-6 md:px-12 lg:px-24 py-20 md:py-32 bg-[#0B0F0E] overflow-hidden min-h-screen"
     >
-      {/* iPhone Background - Subtle visual element */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[600px] h-[800px] opacity-[0.08]">
-          {/* iPhone silhouette using CSS */}
-          <div className="w-full h-full rounded-[60px] border-[8px] border-[#1E7A4A]/30 bg-[#101614]/40" 
-               style={{ 
-                 boxShadow: "inset 0 0 100px rgba(30, 122, 74, 0.1)",
-                 filter: "blur(60px)"
-               }}
-          />
-        </div>
+      {/* 3D iPhone Background Canvas */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <HeroShowcase3D />
       </div>
 
       {/* Green/Black Tint Overlays */}
