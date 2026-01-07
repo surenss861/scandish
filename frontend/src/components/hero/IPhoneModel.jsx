@@ -58,6 +58,11 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   const screenTex = usePhoneDemoTexture();
   const screenPlaneRef = useRef(null);
   const screenAnchorRef = useRef(null);
+  const screenMeshRef = useRef(null);
+  
+  // Matrix helpers for transform calculations
+  const tmpM = useMemo(() => new THREE.Matrix4(), []);
+  const invParentM = useMemo(() => new THREE.Matrix4(), []);
 
   // CRITICAL: Don't clone - modify the actual scene instance that gets rendered
   // Cloning was causing us to modify the wrong object
@@ -129,6 +134,9 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       }
     });
 
+    // Store screen mesh ref for useFrame
+    screenMeshRef.current = screenMesh;
+
     // Hide ALL original screen-related meshes
     if (screenMesh) {
       console.log("🚫 Hiding original screen mesh:", screenMesh.name);
@@ -166,85 +174,62 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       }
     });
 
-    // Create anchor group that follows the screen mesh's world position
-    if (screenMesh && screenAnchorRef.current) {
-      screenMesh.updateWorldMatrix(true, false);
-      const worldPos = new THREE.Vector3();
-      const worldQuat = new THREE.Quaternion();
-      const worldScale = new THREE.Vector3();
-      screenMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
-
-      // Get screen mesh LOCAL size (before world transforms) to avoid double-scaling
-      // We'll use the mesh's geometry bounding box, not world-space size
-      screenMesh.updateMatrixWorld(false);
-      const localBox = new THREE.Box3();
-      screenMesh.geometry.computeBoundingBox();
-      if (screenMesh.geometry.boundingBox) {
-        localBox.copy(screenMesh.geometry.boundingBox);
-        // Apply local transform to get actual local size
-        localBox.applyMatrix4(screenMesh.matrix);
-      } else {
-        // Fallback: use world size but account for scale
-        const worldBox = new THREE.Box3().setFromObject(screenMesh);
-        const worldSize = new THREE.Vector3();
-        worldBox.getSize(worldSize);
-        localBox.setFromCenterAndSize(new THREE.Vector3(), worldSize);
-      }
-
-      const localSize = new THREE.Vector3();
-      localBox.getSize(localSize);
-
-      console.log("📐 Screen mesh local size:", localSize.x.toFixed(3), "x", localSize.y.toFixed(3));
-      console.log("📍 Screen world position:", worldPos.x.toFixed(3), worldPos.y.toFixed(3), worldPos.z.toFixed(3));
-      console.log("🔍 World scale:", worldScale.x.toFixed(3), worldScale.y.toFixed(3), worldScale.z.toFixed(3));
-
-      // Position anchor at screen location (use world position/rotation, but scale = 1 to avoid double-scaling)
-      screenAnchorRef.current.position.copy(worldPos);
-      screenAnchorRef.current.quaternion.copy(worldQuat);
-      screenAnchorRef.current.scale.set(1, 1, 1); // Don't apply world scale - we'll size the plane directly
-
-      // Create plane geometry using LOCAL size (already accounts for mesh scale)
-      // Slightly inset to avoid edge clipping
-      const planeWidth = localSize.x * 0.95;
-      const planeHeight = localSize.y * 0.95;
-
-      if (screenPlaneRef.current) {
-        screenPlaneRef.current.geometry.dispose();
-        screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-
-        // Apply texture to our plane
-        screenTex.flipY = false;
-        screenTex.needsUpdate = true;
-        screenTex.wrapS = THREE.ClampToEdgeWrapping;
-        screenTex.wrapT = THREE.ClampToEdgeWrapping;
-        screenTex.minFilter = THREE.LinearFilter;
-        screenTex.magFilter = THREE.LinearFilter;
-        screenTex.generateMipmaps = false;
-        screenTex.colorSpace = THREE.SRGBColorSpace;
-
-        const material = new THREE.MeshBasicMaterial({
-          map: screenTex,
-          color: new THREE.Color(0xffffff),
-          toneMapped: false,
-          transparent: false,
-        });
-
-        screenPlaneRef.current.material = material;
-        screenPlaneRef.current.material.needsUpdate = true;
-        screenPlaneRef.current.visible = true;
-
-        // Make plane "unmissable" for testing: double-sided, render on top, bigger z-offset
-        screenPlaneRef.current.material.side = THREE.DoubleSide;
-        screenPlaneRef.current.renderOrder = 999; // Render on top
-        screenPlaneRef.current.material.depthTest = false; // Ignore depth for testing
-        screenPlaneRef.current.material.depthWrite = false;
-
-        // Bigger Z offset to ensure it's in front (0.01 instead of 0.001)
-        screenPlaneRef.current.position.z += 0.01;
-
-        console.log("✅ Created replacement screen plane:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
-      }
+    // Create anchor group that follows the screen mesh's transform
+    const screenMesh = screenMeshRef.current;
+    if (!screenMesh || !screenAnchorRef.current || !screenPlaneRef.current) {
+      console.warn("⚠️ Screen mesh or refs not ready");
+      return;
     }
+
+    // IMPORTANT: use LOCAL size (geometry bbox), not Box3().setFromObject (world size)
+    screenMesh.geometry.computeBoundingBox();
+    const bbox = screenMesh.geometry.boundingBox;
+    if (!bbox) {
+      console.warn("⚠️ Screen mesh has no bounding box");
+      return;
+    }
+    
+    const size = new THREE.Vector3();
+    bbox.getSize(size);
+
+    const inset = 0.98;
+    const planeWidth = size.x * inset;
+    const planeHeight = size.y * inset;
+
+    console.log("📐 Screen mesh local size:", size.x.toFixed(3), "x", size.y.toFixed(3));
+    console.log("📐 Plane size:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
+
+    screenPlaneRef.current.geometry.dispose();
+    screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+
+    // Plane sits at the screen mesh origin; anchor will move it
+    screenPlaneRef.current.position.set(0, 0, 0.01); // push forward more
+
+    // Apply texture to our plane - CRITICAL: flipY = true for PlaneGeometry (opposite of GLTF mesh)
+    screenTex.flipY = true; // <-- DIFFERENT from GLTF screen mesh
+    screenTex.needsUpdate = true;
+    screenTex.wrapS = THREE.ClampToEdgeWrapping;
+    screenTex.wrapT = THREE.ClampToEdgeWrapping;
+    screenTex.minFilter = THREE.LinearFilter;
+    screenTex.magFilter = THREE.LinearFilter;
+    screenTex.generateMipmaps = false;
+    screenTex.colorSpace = THREE.SRGBColorSpace;
+
+    const material = new THREE.MeshBasicMaterial({
+      map: screenTex,
+      color: 0xffffff,
+      toneMapped: false,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    screenPlaneRef.current.material = material;
+    screenPlaneRef.current.material.needsUpdate = true;
+    screenPlaneRef.current.visible = true;
+    screenPlaneRef.current.renderOrder = 999;
+
+    console.log("✅ Created replacement screen plane:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
 
     // Hide holder/stand meshes
     const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
@@ -262,28 +247,26 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
   }, [root, screenTex, onLoaded]);
 
   // Keep plane aligned with screen mesh (in case phone rotates)
+  // Convert screenMesh world matrix into anchor-parent local space
   useFrame(() => {
-    if (!screenAnchorRef.current || !screenPlaneRef.current) return;
+    const anchor = screenAnchorRef.current;
+    const plane = screenPlaneRef.current;
+    const screenMesh = screenMeshRef.current;
 
-    // Find screen mesh again to track its position
-    let screenMesh = null;
-    root.traverse((obj) => {
-      if (obj.isMesh && obj.name === SCREEN_MESH_NAME) {
-        screenMesh = obj;
-      }
-    });
+    if (!anchor || !plane || !screenMesh) return;
 
-    if (screenMesh) {
-      screenMesh.updateWorldMatrix(true, false);
-      const worldPos = new THREE.Vector3();
-      const worldQuat = new THREE.Quaternion();
-      const worldScale = new THREE.Vector3();
-      screenMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
+    // Update world matrices
+    screenMesh.updateWorldMatrix(true, false);
 
-      screenAnchorRef.current.position.copy(worldPos);
-      screenAnchorRef.current.quaternion.copy(worldQuat);
-      screenAnchorRef.current.scale.copy(worldScale);
-    }
+    // Convert screenMesh world matrix into anchor-parent local space
+    const parent = anchor.parent;
+    if (!parent) return;
+    
+    parent.updateWorldMatrix(true, false);
+    invParentM.copy(parent.matrixWorld).invert();
+    tmpM.multiplyMatrices(invParentM, screenMesh.matrixWorld);
+
+    tmpM.decompose(anchor.position, anchor.quaternion, anchor.scale);
   });
 
   // Hide holder/stand meshes (one-time setup)

@@ -91,7 +91,7 @@ export function usePhoneDemoTexture() {
 
       // Background - ALWAYS fill entire screen with solid background (critical for visibility)
       // W and H are already defined at the top of draw()
-      
+
       // Clear and fill with bright background
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = "#1A211E"; // Even brighter background for visibility
