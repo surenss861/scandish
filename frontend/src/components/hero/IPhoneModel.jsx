@@ -260,7 +260,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     screenPlaneRef.current.visible = true;
     screenPlaneRef.current.renderOrder = 999;
 
-    console.log("✅ Created replacement screen plane:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
+    console.log("✅ Created replacement screen plane:", planeW.toFixed(3), "x", planeH.toFixed(3));
 
     // Hide holder/stand meshes
     const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
