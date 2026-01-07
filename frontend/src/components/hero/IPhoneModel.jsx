@@ -1,120 +1,66 @@
 import { useRef, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Float, useGLTF } from "@react-three/drei";
+import { Float, useGLTF, Html } from "@react-three/drei";
 import * as THREE from "three";
+import PhoneDemoUI from "./PhoneDemoUI.jsx";
 
 export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) {
   const group = useRef(null);
-  const sceneRef = useRef(null);
-
+  const screenMeshRef = useRef(null);
+  const screenAnchorRef = useRef(null);
+  
   console.log("🔵 IPhoneModel component rendering, loading:", url);
-
+  
   // Load the GLB model
   const { scene } = useGLTF(url);
-
+  
   // Auto-fit model to target size
   useEffect(() => {
     if (!scene) return;
-
-    // Auto-fit model to a target height (mutate original scene)
+    
+    // 1) Compute bounds
     const box = new THREE.Box3().setFromObject(scene);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
     box.getCenter(center);
-
-    console.log("📐 Model bounding box:", {
+    
+    console.log("📐 Model bounding box:", { 
       size: { x: size.x.toFixed(3), y: size.y.toFixed(3), z: size.z.toFixed(3) },
       center: { x: center.x.toFixed(3), y: center.y.toFixed(3), z: center.z.toFixed(3) }
     });
-
-    // Center it
-    scene.position.sub(center);
-
-    // Scale it (target height in "three units")
-    const targetHeight = 1.6;
-    const scaleFactor = targetHeight / size.y;
-    scene.scale.setScalar(scaleFactor);
-
-    console.log("✅ Auto-scaled model:", { scaleFactor: scaleFactor.toFixed(3), targetHeight });
-
-    sceneRef.current = scene; // Store reference for screen texture
-
+    
+    // 2) Center model at origin
+    scene.position.x += (scene.position.x - center.x);
+    scene.position.y += (scene.position.y - center.y);
+    scene.position.z += (scene.position.z - center.z);
+    
+    // 3) Scale to target height (smaller works better in a wide card)
+    const targetHeight = 1.15; // was 1.6 — too big for your wide panel
+    const scale = targetHeight / size.y;
+    scene.scale.setScalar(scale);
+    
+    // 4) (Optional) slight lift so it sits nicer
+    scene.position.y -= 0.05;
+    
+    console.log("✅ Auto-scaled model:", { scale: scale.toFixed(3), targetHeight });
+    
     if (onLoaded) {
       onLoaded();
       console.log("✅ GLB model loaded and auto-fitted successfully:", url);
     }
   }, [scene, url, onLoaded]);
 
-  // Create screen texture from canvas (menu preview - mock of the website)
-  const canvas = document.createElement("canvas");
-  canvas.width = 1170;
-  canvas.height = 2532;
-  const ctx = canvas.getContext("2d");
-
-  // Draw menu preview (mock of the actual menu page)
-  ctx.fillStyle = "#0B0F0E";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // Header bar
-  ctx.fillStyle = "#101614";
-  ctx.fillRect(0, 0, canvas.width, 120);
-
-  // Restaurant name
-  ctx.fillStyle = "#F3F5F4";
-  ctx.font = "bold 70px Inter, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("Demo Restaurant", canvas.width / 2, 75);
-
-  // Menu items
-  let yPos = 250;
-  const items = [
-    { name: "Margherita Pizza", price: "$16.99", category: "Pizza" },
-    { name: "Caesar Salad", price: "$12.99", category: "Salads" },
-    { name: "Pasta Carbonara", price: "$18.99", category: "Pasta" },
-  ];
-
-  // Category header
-  ctx.fillStyle = "#A6B0AA";
-  ctx.font = "600px 40px Inter, sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("PIZZA", 80, 220);
-
-  items.forEach((item) => {
-    // Item card background
-    ctx.fillStyle = "#101614";
-    ctx.fillRect(60, yPos - 30, canvas.width - 120, 80);
-
-    // Item name
-    ctx.fillStyle = "#F3F5F4";
-    ctx.font = "50px Inter, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText(item.name, 80, yPos + 20);
-
-    // Price
-    ctx.fillStyle = "#1E7A4A";
-    ctx.textAlign = "right";
-    ctx.fillText(item.price, canvas.width - 80, yPos + 20);
-
-    yPos += 120;
-  });
-
-  const screenTex = new THREE.CanvasTexture(canvas);
-  screenTex.flipY = false;
-  screenTex.colorSpace = THREE.SRGBColorSpace;
-
+  // Find and store screen mesh reference
   useEffect(() => {
-    if (!scene) {
-      console.error("❌ Scene is null, cannot apply screen texture");
-      return;
-    }
+    if (!scene) return;
 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
 
     // Based on GLTF: Screen_14 node contains Display material (material index 14)
     const screenNode = scene.getObjectByName("Screen_14");
     let screenFound = false;
-
+    
     if (screenNode) {
       console.log("✅ Found Screen_14 node");
       screenNode.traverse((obj) => {
@@ -122,10 +68,7 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
           const matName = obj.material.name || "";
           if (matName.toLowerCase().includes("display")) {
             console.log(`✅ Found display mesh: "${obj.name}" | material: "${matName}"`);
-            obj.material.map = screenTex;
-            obj.material.emissive = new THREE.Color("#ffffff");
-            obj.material.emissiveIntensity = 0.6;
-            obj.material.needsUpdate = true;
+            screenMeshRef.current = obj; // Store reference for Html anchor
             screenFound = true;
           }
         }
@@ -138,13 +81,10 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
         if (obj.isMesh && obj.material) {
           const name = obj.name || "unnamed";
           const matName = obj.material.name || "no material";
-
+          
           if (matName.toLowerCase().includes("display")) {
             console.log(`✅ Found display mesh: "${name}" | material: "${matName}"`);
-            obj.material.map = screenTex;
-            obj.material.emissive = new THREE.Color("#ffffff");
-            obj.material.emissiveIntensity = 0.6;
-            obj.material.needsUpdate = true;
+            screenMeshRef.current = obj; // Store reference for Html anchor
             screenFound = true;
           }
         }
@@ -162,8 +102,20 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
         }
       }
     });
-  }, [screenTex]);
+  }, [scene]);
 
+  // Keep anchor glued to screen mesh
+  useFrame(() => {
+    const screen = screenMeshRef.current;
+    const anchor = screenAnchorRef.current;
+    if (!screen || !anchor) return;
+
+    screen.updateWorldMatrix(true, false);
+    anchor.matrix.copy(screen.matrixWorld);
+    anchor.matrix.decompose(anchor.position, anchor.quaternion, anchor.scale);
+  });
+
+  // Animation for phone float
   useFrame((state) => {
     if (!group.current) return;
     const t = state.clock.getElapsedTime();
@@ -171,13 +123,34 @@ export default function IPhoneModel({ url = "/models/scandish.glb", onLoaded }) 
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
 
-  // Auto-fitted model - simple positioning
+  // Auto-fitted model - premium product hero angle
   if (!scene) return null;
-
+  
   return (
-    <group ref={group} position={[0, -0.2, 0]}>
-      <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.22}>
+    <group
+      ref={group}
+      position={[0.45, -0.15, 0]}     // push into right side of card
+      rotation={[0.05, -0.55, 0.02]} // premium angle
+      scale={1}
+    >
+      <Float speed={1.1} rotationIntensity={0.18} floatIntensity={0.25}>
         <primitive object={scene} />
+        
+        {/* Screen anchor (follows the screen mesh) */}
+        <group ref={screenAnchorRef}>
+          <Html
+            transform
+            occlude
+            style={{ pointerEvents: "auto" }}
+            distanceFactor={1.05}
+            position={[0, 0, 0.002]}   // slightly above screen to avoid z-fighting
+          >
+            {/* size matches a phone-ish viewport */}
+            <div style={{ width: 330, height: 720 }}>
+              <PhoneDemoUI />
+            </div>
+          </Html>
+        </group>
       </Float>
     </group>
   );

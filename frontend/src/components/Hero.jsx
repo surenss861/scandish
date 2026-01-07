@@ -114,7 +114,7 @@ export default function Hero() {
               {/* Spotlight */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(30,122,74,0.18),transparent_55%)]" />
 
-              {/* 3D Canvas lives INSIDE this card */}
+              {/* 3D Canvas lives INSIDE this card - allow pointer events for interactive demo */}
               <div className="absolute inset-0">
                 <HeroShowcase3D />
               </div>
