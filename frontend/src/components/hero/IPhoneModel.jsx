@@ -229,8 +229,8 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     // Z offset for safety (z-fighting)
     screenPlaneRef.current.position.set(0, 0, 0.012);
     
-    // Also update bloom plane geometry (slightly larger)
-    if (screenBloomRef.current) {
+    // Also update bloom plane geometry (slightly larger) - set after plane is ready
+    if (screenBloomRef.current && screenPlaneRef.current.geometry) {
       screenBloomRef.current.geometry.dispose();
       screenBloomRef.current.geometry = new THREE.PlaneGeometry(planeW * 1.04, planeH * 1.04);
     }
@@ -330,7 +330,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
             depthWrite={false}
           />
         </mesh>
-        
+
         <mesh ref={screenPlaneRef}>
           {/* Geometry will be set in useEffect based on screen mesh size */}
           <planeGeometry args={[1, 2]} />
