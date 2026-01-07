@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useBentoReveal } from "../hooks/useBentoReveal.js";
 
 const faqs = [
   {
@@ -37,37 +39,53 @@ const faqs = [
 
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState(null);
+  const ref = useBentoReveal();
 
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index);
   };
 
   return (
-    <section id="faq" className="px-6 md:px-12 lg:px-24 py-20 bg-gray-50">
+    <section
+      ref={ref}
+      id="faq"
+      className="px-6 md:px-12 lg:px-24 py-20 bg-[#0B0F0E]"
+    >
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+        <motion.div
+          data-reveal
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-[#F3F5F4] mb-4">
             Frequently Asked Questions
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-[#A6B0AA]">
             Everything you need to know about Scandish
           </p>
-        </div>
+        </motion.div>
 
         <div className="space-y-4">
           {faqs.map((faq, index) => (
-            <div
+            <motion.div
               key={index}
-              className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:border-gray-300 transition-colors"
+              data-reveal
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.05 }}
+              className="bg-[#101614] border-2 border-[#1B2420] rounded-2xl overflow-hidden hover:border-[#1E7A4A] transition-colors"
             >
               <button
                 onClick={() => toggleFAQ(index)}
-                className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
+                className="w-full px-6 py-5 text-left flex items-center justify-between gap-4 hover:bg-[#0B0F0E] transition-colors"
               >
-                <h3 className="font-semibold text-gray-900 pr-4">
+                <h3 className="font-semibold text-[#F3F5F4] pr-4">
                   {faq.question}
                 </h3>
-                <div className="shrink-0 text-gray-600">
+                <div className="shrink-0 text-[#A6B0AA]">
                   {openIndex === index ? (
                     <ChevronUp size={20} />
                   ) : (
@@ -78,38 +96,46 @@ export default function FAQ() {
 
               {openIndex === index && (
                 <div className="px-6 pb-5">
-                  <div className="pt-2 border-t border-gray-200">
-                    <p className="text-gray-600 leading-relaxed">{faq.answer}</p>
+                  <div className="pt-2 border-t border-[#1B2420]">
+                    <p className="text-[#A6B0AA] leading-relaxed">
+                      {faq.answer}
+                    </p>
                   </div>
                 </div>
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
 
         {/* Support CTA */}
-        <div className="mt-16 text-center bg-white border-2 border-gray-200 rounded-2xl p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-3">
+        <motion.div
+          data-reveal
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16 text-center bg-[#101614] border-2 border-[#1B2420] rounded-2xl p-8"
+        >
+          <h3 className="text-2xl font-bold text-[#F3F5F4] mb-3">
             Still Have Questions?
           </h3>
-          <p className="text-gray-600 mb-6">
+          <p className="text-[#A6B0AA] mb-6">
             Our support team responds within 2 hours during business hours
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               to="/login"
-              className="px-6 py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+              className="px-6 py-3 bg-[#1E7A4A] text-[#F3F5F4] rounded-xl font-semibold hover:bg-[#2AAE67] transition-colors"
             >
               Get Started Now
             </Link>
             <a
               href="mailto:support@scandish.ca"
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:border-gray-400 transition-colors"
+              className="px-6 py-3 border-2 border-[#1B2420] text-[#A6B0AA] rounded-xl font-semibold hover:border-[#1E7A4A] hover:text-[#F3F5F4] transition-colors"
             >
               Email Support
             </a>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

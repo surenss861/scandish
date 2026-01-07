@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Search, BarChart3, Palette, Users, QrCode, Image as ImageIcon } from "lucide-react";
+import { useBentoReveal } from "../hooks/useBentoReveal.js";
 
 const features = [
   {
@@ -8,66 +9,66 @@ const features = [
     description: "Reorder items instantly. No coding required.",
     icon: "🎯",
     size: "big",
-    color: "bg-blue-50 border-blue-200",
   },
   {
     title: "Public Menu Page",
     description: "Search, categories, dark mode. Optimized for every device.",
     icon: "📱",
     size: "big",
-    color: "bg-green-50 border-green-200",
   },
   {
     title: "QR Code Stays Same",
     description: "Update menu content, QR never changes.",
     icon: <QrCode className="w-6 h-6" />,
     size: "small",
-    color: "bg-purple-50 border-purple-200",
   },
   {
     title: "Photos + Specials",
     description: "Showcase dishes with photos. Boost sales.",
     icon: <ImageIcon className="w-6 h-6" />,
     size: "small",
-    color: "bg-amber-50 border-amber-200",
   },
   {
     title: "Analytics Insights",
     description: "Top clicked items, engagement metrics, revenue opportunities.",
     icon: <BarChart3 className="w-6 h-6" />,
     size: "small",
-    color: "bg-indigo-50 border-indigo-200",
   },
   {
     title: "Custom Branding",
     description: "Logo, colors, fonts. Match your restaurant's style.",
     icon: <Palette className="w-6 h-6" />,
     size: "small",
-    color: "bg-pink-50 border-pink-200",
   },
   {
     title: "Multi-Location + Teams",
     description: "Manage multiple locations. Invite team members with roles.",
     icon: <Users className="w-6 h-6" />,
     size: "wide",
-    color: "bg-gray-50 border-gray-200",
   },
 ];
 
 export default function BentoFeatures() {
+  const ref = useBentoReveal();
+
   return (
-    <section id="features" className="px-6 md:px-12 lg:px-24 py-20 bg-gray-50">
+    <section
+      ref={ref}
+      id="features"
+      className="px-6 md:px-12 lg:px-24 py-20 bg-[#0B0F0E]"
+    >
       <div className="max-w-7xl mx-auto">
         <motion.div
+          data-reveal
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-[#F3F5F4] mb-4">
             Everything you need
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-[#A6B0AA]">
             Built for speed. Built for conversion.
           </p>
         </motion.div>
@@ -77,6 +78,7 @@ export default function BentoFeatures() {
           {features.map((feature, idx) => (
             <motion.div
               key={idx}
+              data-reveal
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -84,21 +86,20 @@ export default function BentoFeatures() {
               className={`
                 ${feature.size === "big" ? "md:col-span-2 md:row-span-2" : ""}
                 ${feature.size === "wide" ? "md:col-span-2" : ""}
-                ${feature.color}
-                border-2 rounded-2xl p-6 hover:shadow-lg transition-shadow
+                bg-[#101614] border-2 border-[#1B2420] rounded-2xl p-6 hover:border-[#1E7A4A] hover:shadow-lg transition-all cursor-pointer
               `}
             >
               <div className="flex items-center gap-3 mb-3">
                 {typeof feature.icon === "string" ? (
                   <span className="text-3xl">{feature.icon}</span>
                 ) : (
-                  <div className="text-gray-700">{feature.icon}</div>
+                  <div className="text-[#1E7A4A]">{feature.icon}</div>
                 )}
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-[#F3F5F4]">
                   {feature.title}
                 </h3>
               </div>
-              <p className="text-sm text-gray-600">{feature.description}</p>
+              <p className="text-sm text-[#A6B0AA]">{feature.description}</p>
             </motion.div>
           ))}
         </div>
@@ -106,4 +107,3 @@ export default function BentoFeatures() {
     </section>
   );
 }
-

@@ -10,7 +10,7 @@ import Footer from "../components/Footer.jsx";
 
 export default function Landing() {
   return (
-    <div className="bg-[#FAFAFA] text-gray-900 min-h-screen">
+    <div className="bg-[#0B0F0E] text-[#F3F5F4] min-h-screen">
       <Navbar />
       <Hero />
       <BentoFeatures />

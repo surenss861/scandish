@@ -2,139 +2,62 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar for VibeCoder */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: #0a0908;
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #F3C77E, #d6a856);
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #d6a856, #F3C77E);
+/* Deep Forest Color Palette (Option A) */
+:root {
+  --bg-black: #0B0F0E;
+  --card: #101614;
+  --border: #1B2420;
+  --text: #F3F5F4;
+  --text-muted: #A6B0AA;
+  --green-primary: #1E7A4A;
+  --green-hover: #2AAE67;
 }
 
 /* ---------------- Global Styles ---------------- */
 html,
 body {
-  @apply antialiased bg-[#080705] text-[#FFFFFA];
+  @apply antialiased;
+  background-color: var(--bg-black);
+  color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   scroll-behavior: smooth;
 }
 
 /* Selection highlight */
 ::selection {
-  background-color: #F3C77E;
-  color: #080705;
+  background-color: var(--green-primary);
+  color: var(--text);
 }
 
-/* Luxury scrollbars */
+/* Scrollbars */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #080705;
+  background: var(--bg-black);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #702632;
+  background: var(--border);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #912F40;
+  background: var(--green-primary);
 }
 
-/* ---------------- Animations ---------------- */
-
-/* Pulse for QR or buttons */
-@keyframes pulseQR {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.2;
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-
-  50% {
-    transform: scale(1.05);
-    opacity: 0.4;
-  }
-
-  100% {
-    transform: scale(0.95);
-    opacity: 0.2;
-  }
-}
-
-.animate-pulseQR {
-  animation: pulseQR 2.5s infinite ease-in-out;
-}
-
-/* Fade in upward */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeInUp {
-  animation: fadeInUp 1s ease-out forwards;
-}
-
-/* Fade in with blur */
-@keyframes fadeInBlur {
-  from {
-    opacity: 0;
-    filter: blur(8px);
-  }
-
-  to {
-    opacity: 1;
-    filter: blur(0);
-  }
-}
-
-.animate-fadeInBlur {
-  animation: fadeInBlur 0.8s ease-out forwards;
-}
-
-/* Shimmer effect for CTA buttons */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.shimmer {
-  background: linear-gradient(90deg,
-      rgba(255, 255, 255, 0) 25%,
-      rgba(243, 199, 126, 0.6) 50%,
-      rgba(255, 255, 255, 0) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 2.5s infinite;
-}
-
-/* Glow effect for cards/buttons */
-.glow {
-  box-shadow: 0 0 20px rgba(243, 199, 126, 0.25);
 }
 
 /* Line clamp utility */
@@ -143,172 +66,4 @@ body {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* Grid animation */
-@keyframes gridMove {
-  0% {
-    transform: translate(0, 0);
-  }
-
-  100% {
-    transform: translate(20px, 20px);
-  }
-}
-
-/* Enhanced shimmer effect */
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-.animate-shimmer {
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-/* Glassmorphic utilities */
-.glass {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.glass-hover:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-/* Premium button effects */
-.btn-premium {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b, #d97706);
-  box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
-  transition: all 0.3s ease;
-}
-
-.btn-premium:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(251, 191, 36, 0.6);
-}
-
-/* Enhanced animations */
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0px) scale(1);
-  }
-
-  50% {
-    transform: translateY(-20px) scale(1.05);
-  }
-}
-
-@keyframes breathe {
-
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-
-  50% {
-    opacity: 0.6;
-  }
-}
-
-@keyframes shimmerSweep {
-  0% {
-    transform: translateX(-100%) skewX(-15deg);
-  }
-
-  100% {
-    transform: translateX(200%) skewX(-15deg);
-  }
-}
-
-/* Ripple effect for buttons */
-@keyframes ripple {
-  0% {
-    transform: scale(0);
-    opacity: 1;
-  }
-
-  100% {
-    transform: scale(4);
-    opacity: 0;
-  }
-}
-
-.ripple-effect {
-  position: relative;
-  overflow: hidden;
-}
-
-.ripple-effect::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.ripple-effect:active::before {
-  width: 300px;
-  height: 300px;
-}
-
-/* Additional premium animations */
-@keyframes breathe {
-
-  0%,
-  100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 0.6;
-    transform: scale(1.02);
-  }
-}
-
-@keyframes shimmerSweep {
-  0% {
-    transform: translateX(-100%) skewX(-15deg);
-    opacity: 0;
-  }
-
-  50% {
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateX(200%) skewX(-15deg);
-    opacity: 0;
-  }
-}
-
-@keyframes float {
-
-  0%,
-  100% {
-    transform: translateY(0px) scale(1);
-  }
-
-  33% {
-    transform: translateY(-10px) scale(1.02);
-  }
-
-  66% {
-    transform: translateY(5px) scale(0.98);
-  }
 }
