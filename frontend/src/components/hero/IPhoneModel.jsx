@@ -7,7 +7,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   const group = useRef(null);
   const [screenTexture, setScreenTexture] = useState(null);
   const [meshNames, setMeshNames] = useState([]);
-  
+
   // Load the GLB model
   const { scene } = useGLTF(url);
 
@@ -22,22 +22,22 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     canvas.width = 1170; // iPhone 17 Pro screen resolution
     canvas.height = 2532;
     const ctx = canvas.getContext("2d");
-    
+
     // Draw menu preview
     // Background
     ctx.fillStyle = "#0B0F0E";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Header bar
     ctx.fillStyle = "#101614";
     ctx.fillRect(0, 0, canvas.width, 120);
-    
+
     // Restaurant name
     ctx.fillStyle = "#F3F5F4";
     ctx.font = "bold 70px Inter, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Demo Restaurant", canvas.width / 2, 75);
-    
+
     // Menu items
     let yPos = 250;
     const items = [
@@ -45,22 +45,22 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
       { name: "Caesar Salad", price: "$12.99" },
       { name: "Pasta Carbonara", price: "$18.99" },
     ];
-    
+
     items.forEach((item) => {
       // Item name
       ctx.fillStyle = "#F3F5F4";
       ctx.font = "50px Inter, sans-serif";
       ctx.textAlign = "left";
       ctx.fillText(item.name, 80, yPos);
-      
+
       // Price
       ctx.fillStyle = "#1E7A4A";
       ctx.textAlign = "right";
       ctx.fillText(item.price, canvas.width - 80, yPos);
-      
+
       yPos += 120;
     });
-    
+
     // Create texture
     const texture = new THREE.CanvasTexture(canvas);
     texture.flipY = false;
@@ -79,7 +79,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
         names.push({ name, matName, obj });
       }
     });
-    
+
     console.log("📱 iPhone GLB meshes found:", names.length);
     if (names.length > 0) {
       console.table(names.map(n => ({ Mesh: n.name, Material: n.matName })));
@@ -124,7 +124,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
       if (isScreen) {
         console.log("✅ Found screen mesh:", name, "| material:", matName);
         screenFound = true;
-        
+
         // Create new material with screen texture
         obj.material = new THREE.MeshStandardMaterial({
           map: screenTexture,
