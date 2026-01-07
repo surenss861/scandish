@@ -54,10 +54,12 @@ export function usePhoneDemoTexture() {
       }
 
       // Background - ALWAYS fill entire screen with solid background (critical for visibility)
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const W = canvas.width;
+      const H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
       // Solid bright background - fills entire canvas
       ctx.fillStyle = "#141A18"; // Bright enough to read as "OLED on"
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, 0, W, H);
 
       // Top bar - much brighter, fills full width
       ctx.fillStyle = "#1F2522";
@@ -103,7 +105,7 @@ export function usePhoneDemoTexture() {
 
       // Primary button - bright green
       ctx.fillStyle = "#1E7A4A";
-      roundRect(ctx, 120, 1120, canvas.width - 240, 180, 60);
+      roundRect(ctx, 120, 1120, W - 240, 180, 60);
       ctx.fill();
 
       ctx.fillStyle = "#F3F5F4"; // Bright white text
