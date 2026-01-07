@@ -18,19 +18,34 @@ if (!SUPABASE_ENV_OK) {
     "See ENVIRONMENT_SETUP.md for details."
   );
   
-  // Create a minimal client that will fail gracefully with helpful errors
-  // This prevents the app from crashing immediately
-  supabase = createClient(
-    "https://placeholder.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1wbGFjZWhvbGRlciIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxOTIwMDAsImV4cCI6MTk2MDc2ODAwMH0.placeholder",
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
+  // Create a mock client that fails gracefully
+  // This prevents the app from crashing but will show errors on API calls
+  supabase = {
+    auth: {
+      getSession: async () => {
+        console.warn("Supabase not configured - returning empty session");
+        return { data: { session: null }, error: null };
       },
-    }
-  );
+      onAuthStateChange: () => {
+        console.warn("Supabase not configured - auth state changes disabled");
+        return { data: { subscription: { unsubscribe: () => {} } } };
+      },
+      signInWithPassword: async () => {
+        throw new Error("Supabase not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file");
+      },
+      signOut: async () => {
+        return { error: null };
+      },
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: async () => ({ data: null, error: { message: "Supabase not configured" } }),
+          maybeSingle: async () => ({ data: null, error: null }),
+        }),
+      }),
+    }),
+  };
 } else {
   supabase = createClient(url, anon, {
     auth: {

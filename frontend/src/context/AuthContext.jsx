@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "../lib/supabaseClient";
+import { supabase, SUPABASE_ENV_OK } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
 
@@ -9,19 +9,28 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!supabase) {
-      console.warn('Supabase not configured - user must authenticate');
+    if (!SUPABASE_ENV_OK) {
+      console.warn('Supabase not configured - running in demo mode');
       setUser(null);
+      setSession(null);
       setLoading(false);
       return;
     }
 
     // Get current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session ?? null);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session }, error }) => {
+        if (error) {
+          console.error('Error getting session:', error);
+        }
+        setSession(session ?? null);
+        setUser(session?.user ?? null);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error in getSession:', err);
+        setLoading(false);
+      });
 
     // Listen for changes
     const {
@@ -32,7 +41,11 @@ export function AuthProvider({ children }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   const value = { user, session, loading };
