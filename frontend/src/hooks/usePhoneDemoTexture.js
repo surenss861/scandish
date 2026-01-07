@@ -37,6 +37,10 @@ export function usePhoneDemoTexture() {
       const ctx = ctxRef.current;
       if (!ctx) return;
 
+      // CRITICAL: Define W and H FIRST before any code that references them
+      const W = canvas.width;
+      const H = canvas.height;
+
       // Throttle to 30fps for performance (3M pixels is heavy)
       const deltaTime = now - lastFrameTime;
       if (deltaTime < frameInterval) {
