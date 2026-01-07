@@ -3,15 +3,15 @@ import { useFrame } from "@react-three/fiber";
 import { Float, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
-export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
+export default function IPhoneModel({ url = "/models/iphone_17_pro.glb" }) {
   const group = useRef(null);
-  
+
   console.log("🔵 IPhoneModel component rendering, loading:", url);
-  
+
   // Load the GLB model
   let scene;
   let glbError = null;
-  
+
   try {
     const result = useGLTF(url);
     scene = result.scene;
@@ -28,7 +28,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   canvas.width = 1170;
   canvas.height = 2532;
   const ctx = canvas.getContext("2d");
-  
+
   // Draw menu preview
   ctx.fillStyle = "#0B0F0E";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -38,14 +38,14 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   ctx.font = "bold 70px Inter, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText("Demo Restaurant", canvas.width / 2, 75);
-  
+
   let yPos = 250;
   const items = [
     { name: "Margherita Pizza", price: "$16.99" },
     { name: "Caesar Salad", price: "$12.99" },
     { name: "Pasta Carbonara", price: "$18.99" },
   ];
-  
+
   items.forEach((item) => {
     ctx.fillStyle = "#F3F5F4";
     ctx.font = "50px Inter, sans-serif";
@@ -56,7 +56,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     ctx.fillText(item.price, canvas.width - 80, yPos);
     yPos += 120;
   });
-  
+
   const screenTex = new THREE.CanvasTexture(canvas);
   screenTex.flipY = false;
   screenTex.colorSpace = THREE.SRGBColorSpace;
@@ -171,4 +171,4 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
 }
 
 // Preload the model
-useGLTF.preload("/models/iphone17-pro.glb");
+useGLTF.preload("/models/iphone_17_pro.glb");
