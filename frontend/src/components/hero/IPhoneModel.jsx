@@ -238,11 +238,11 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
 
     onLoaded?.();
   }, [root, screenTex, onLoaded]);
-  
+
   // Keep plane aligned with screen mesh (in case phone rotates)
   useFrame(() => {
     if (!screenAnchorRef.current || !screenPlaneRef.current) return;
-    
+
     // Find screen mesh again to track its position
     let screenMesh = null;
     root.traverse((obj) => {
@@ -250,53 +250,52 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         screenMesh = obj;
       }
     });
-    
+
     if (screenMesh) {
       screenMesh.updateWorldMatrix(true, false);
       const worldPos = new THREE.Vector3();
       const worldQuat = new THREE.Quaternion();
       const worldScale = new THREE.Vector3();
       screenMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
-      
+
       screenAnchorRef.current.position.copy(worldPos);
       screenAnchorRef.current.quaternion.copy(worldQuat);
       screenAnchorRef.current.scale.copy(worldScale);
     }
   });
 
-  // Hide holder/stand meshes
-  const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
-  root.traverse((obj) => {
-    if (obj.isMesh) {
-      const name = (obj.name ?? "").toLowerCase();
-      const matName = obj.material?.name?.toLowerCase?.() ?? "";
-      if (holderNames.some((h) => name.includes(h) || matName.includes(h))) {
-        obj.visible = false;
+  // Hide holder/stand meshes (one-time setup)
+  useEffect(() => {
+    const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
+    root.traverse((obj) => {
+      if (obj.isMesh) {
+        const name = (obj.name ?? "").toLowerCase();
+        const matName = obj.material?.name?.toLowerCase?.() ?? "";
+        if (holderNames.some((h) => name.includes(h) || matName.includes(h))) {
+          obj.visible = false;
+        }
       }
-    }
-  });
+    });
+  }, [root]);
 
-  onLoaded?.();
-}, [root, screenTex, onLoaded]);
+  return (
+    <group>
+      {/* Original iPhone model (screen hidden, body visible) */}
+      <primitive object={root} scale={heroScale} />
 
-return (
-  <group>
-    {/* Original iPhone model (screen hidden, body visible) */}
-    <primitive object={root} scale={heroScale} />
-
-    {/* Replacement screen plane - positioned where original screen was */}
-    <group ref={screenAnchorRef}>
-      <mesh ref={screenPlaneRef}>
-        {/* Geometry will be set in useEffect based on screen mesh size */}
-        <planeGeometry args={[1, 2]} />
-        <meshBasicMaterial
-          color={0x00ff00} // Temporary green until texture loads
-          toneMapped={false}
-        />
-      </mesh>
+      {/* Replacement screen plane - positioned where original screen was */}
+      <group ref={screenAnchorRef}>
+        <mesh ref={screenPlaneRef}>
+          {/* Geometry will be set in useEffect based on screen mesh size */}
+          <planeGeometry args={[1, 2]} />
+          <meshBasicMaterial
+            color={0x00ff00} // Temporary green until texture loads
+            toneMapped={false}
+          />
+        </mesh>
+      </group>
     </group>
-  </group>
-);
+  );
 }
 
 useGLTF.preload("/models/scandish.glb");
