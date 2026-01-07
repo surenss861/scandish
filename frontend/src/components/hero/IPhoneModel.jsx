@@ -6,8 +6,24 @@ import * as THREE from "three";
 export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
   const group = useRef(null);
   
+  console.log("🔵 IPhoneModel component rendering, loading:", url);
+  
   // Load the GLB model (hooks must be called unconditionally)
-  const { scene } = useGLTF(url);
+  let scene;
+  try {
+    const result = useGLTF(url);
+    scene = result.scene;
+    console.log("✅ GLB model loaded successfully:", url, scene);
+  } catch (error) {
+    console.error("❌ Failed to load GLB model:", error);
+    // Return a visible placeholder so we know the component is rendering
+    return (
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[2, 4, 0.2]} />
+        <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
+      </mesh>
+    );
+  }
 
   // Create screen texture from canvas (menu preview)
   const canvas = document.createElement("canvas");
@@ -55,6 +71,7 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
 
     console.log("📱 iPhoneModel mounted, finding screen mesh...");
     console.log("📦 GLB URL:", url);
+    console.log("📦 Scene children:", scene.children.length);
 
     // Try multiple common screen mesh names
     const screenNames = ["Screen", "screen", "Display", "display", "Glass", "glass", "Front", "front", "LCD", "lcd", "Screen_0", "screen_0"];
@@ -133,6 +150,18 @@ export default function IPhoneModel({ url = "/models/iphone17-pro.glb" }) {
     group.current.rotation.y = Math.sin(t * 0.35) * 0.25;
     group.current.rotation.x = Math.sin(t * 0.22) * 0.05;
   });
+
+  if (!scene) {
+    console.error("❌ Scene is null, returning placeholder");
+    return (
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[2, 4, 0.2]} />
+        <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
+      </mesh>
+    );
+  }
+
+  console.log("✅ Rendering iPhone model");
 
   return (
     <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
