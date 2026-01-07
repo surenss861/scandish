@@ -104,7 +104,7 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       console.warn("⚠️ Screen texture not ready yet");
       return;
     }
-    
+
     let screenMesh = null;
     const glassMeshes = [];
     const filterMeshes = []; // Mirror_filter, Tint_back_glass, etc.
@@ -122,8 +122,8 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
           glassMeshes.push(obj);
         }
         // Find filter/overlay meshes that might block the screen
-        if (objName.includes("filter") || objName.includes("mirror") || objName.includes("tint") || 
-            matName.includes("filter") || matName.includes("mirror") || matName.includes("tint")) {
+        if (objName.includes("filter") || objName.includes("mirror") || objName.includes("tint") ||
+          matName.includes("filter") || matName.includes("mirror") || matName.includes("tint")) {
           filterMeshes.push(obj);
         }
       }
@@ -134,18 +134,18 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       console.log("🚫 Hiding original screen mesh:", screenMesh.name);
       screenMesh.visible = false;
     }
-    
+
     filterMeshes.forEach((filter) => {
       console.log("🚫 Hiding filter/overlay mesh:", filter.name);
       filter.visible = false;
     });
-    
+
     glassMeshes.forEach((glass) => {
       const name = (glass.name ?? "").toLowerCase();
       const matName = glass.material?.name?.toLowerCase?.() ?? "";
-      if (name.includes("14") || name.includes("53") || name.includes("front") || 
-          name.includes("tint") || matName.includes("tint") || matName.includes("mirror") ||
-          name.includes("display") || matName.includes("display")) {
+      if (name.includes("14") || name.includes("53") || name.includes("front") ||
+        name.includes("tint") || matName.includes("tint") || matName.includes("mirror") ||
+        name.includes("display") || matName.includes("display")) {
         console.log("🚫 Hiding front glass/display:", glass.name);
         glass.visible = false;
       } else {
@@ -173,29 +173,29 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
       const worldQuat = new THREE.Quaternion();
       const worldScale = new THREE.Vector3();
       screenMesh.matrixWorld.decompose(worldPos, worldQuat, worldScale);
-      
+
       // Get screen mesh size for plane sizing
       const box = new THREE.Box3().setFromObject(screenMesh);
       const size = new THREE.Vector3();
       box.getSize(size);
-      
+
       console.log("📐 Original screen mesh size:", size.x.toFixed(3), "x", size.y.toFixed(3));
       console.log("📍 Screen world position:", worldPos.x.toFixed(3), worldPos.y.toFixed(3), worldPos.z.toFixed(3));
-      
+
       // Position anchor at screen location
       screenAnchorRef.current.position.copy(worldPos);
       screenAnchorRef.current.quaternion.copy(worldQuat);
       screenAnchorRef.current.scale.copy(worldScale);
-      
+
       // Create plane geometry matching screen aspect ratio (iPhone 17 Pro: ~9:19.5)
       // Use the screen mesh's dimensions as reference
       const planeWidth = size.x * 0.95; // Slightly inset
       const planeHeight = size.y * 0.95;
-      
+
       if (screenPlaneRef.current) {
         screenPlaneRef.current.geometry.dispose();
         screenPlaneRef.current.geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-        
+
         // Apply texture to our plane
         screenTex.flipY = false;
         screenTex.needsUpdate = true;
@@ -205,24 +205,36 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
         screenTex.magFilter = THREE.LinearFilter;
         screenTex.generateMipmaps = false;
         screenTex.colorSpace = THREE.SRGBColorSpace;
-        
+
         const material = new THREE.MeshBasicMaterial({
           map: screenTex,
           color: new THREE.Color(0xffffff),
           toneMapped: false,
           transparent: false,
         });
-        
+
         screenPlaneRef.current.material = material;
         screenPlaneRef.current.material.needsUpdate = true;
         screenPlaneRef.current.visible = true;
-        
+
         // Slight Z offset to avoid z-fighting
         screenPlaneRef.current.position.z += 0.001;
-        
+
         console.log("✅ Created replacement screen plane:", planeWidth.toFixed(3), "x", planeHeight.toFixed(3));
       }
     }
+
+    // Hide holder/stand meshes
+    const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
+    root.traverse((obj) => {
+      if (obj.isMesh) {
+        const name = (obj.name ?? "").toLowerCase();
+        const matName = obj.material?.name?.toLowerCase?.() ?? "";
+        if (holderNames.some((h) => name.includes(h) || matName.includes(h))) {
+          obj.visible = false;
+        }
+      }
+    });
 
     onLoaded?.();
   }, [root, screenTex, onLoaded]);
@@ -252,39 +264,39 @@ export default function IPhoneModel({ heroScale = 2.45, onLoaded }) {
     }
   });
 
-    // Hide holder/stand meshes
-    const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
-    root.traverse((obj) => {
-      if (obj.isMesh) {
-        const name = (obj.name ?? "").toLowerCase();
-        const matName = obj.material?.name?.toLowerCase?.() ?? "";
-        if (holderNames.some((h) => name.includes(h) || matName.includes(h))) {
-          obj.visible = false;
-        }
+  // Hide holder/stand meshes
+  const holderNames = ["holder", "stand", "base", "mount", "support", "dock"];
+  root.traverse((obj) => {
+    if (obj.isMesh) {
+      const name = (obj.name ?? "").toLowerCase();
+      const matName = obj.material?.name?.toLowerCase?.() ?? "";
+      if (holderNames.some((h) => name.includes(h) || matName.includes(h))) {
+        obj.visible = false;
       }
-    });
+    }
+  });
 
-    onLoaded?.();
-  }, [root, screenTex, onLoaded]);
+  onLoaded?.();
+}, [root, screenTex, onLoaded]);
 
-  return (
-    <group>
-      {/* Original iPhone model (screen hidden, body visible) */}
-      <primitive object={root} scale={heroScale} />
-      
-      {/* Replacement screen plane - positioned where original screen was */}
-      <group ref={screenAnchorRef}>
-        <mesh ref={screenPlaneRef}>
-          {/* Geometry will be set in useEffect based on screen mesh size */}
-          <planeGeometry args={[1, 2]} />
-          <meshBasicMaterial 
-            color={0x00ff00} // Temporary green until texture loads
-            toneMapped={false}
-          />
-        </mesh>
-      </group>
+return (
+  <group>
+    {/* Original iPhone model (screen hidden, body visible) */}
+    <primitive object={root} scale={heroScale} />
+
+    {/* Replacement screen plane - positioned where original screen was */}
+    <group ref={screenAnchorRef}>
+      <mesh ref={screenPlaneRef}>
+        {/* Geometry will be set in useEffect based on screen mesh size */}
+        <planeGeometry args={[1, 2]} />
+        <meshBasicMaterial
+          color={0x00ff00} // Temporary green until texture loads
+          toneMapped={false}
+        />
+      </mesh>
     </group>
-  );
+  </group>
+);
 }
 
 useGLTF.preload("/models/scandish.glb");
