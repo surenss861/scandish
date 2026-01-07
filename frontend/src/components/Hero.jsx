@@ -16,7 +16,7 @@ export default function Hero() {
       className="relative overflow-hidden bg-[#0B0F0E] min-h-screen"
     >
       {/* 3D BACKGROUND */}
-      <div className="pointer-events-none absolute inset-0 z-0">
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-visible">
         <HeroBackground3D />
 
         {/* Haze: stronger on left (text), minimal on right (product) */}

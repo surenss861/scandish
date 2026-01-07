@@ -9,7 +9,7 @@ export default function HeroBackground3D() {
     <Canvas
       className="h-full w-full"
       dpr={[1, 1.75]}
-      camera={{ position: [0.0, 0.1, 2.25], fov: 24 }} // ✅ tighter + closer = BIG phone
+      camera={{ position: [0.0, 0.08, 2.05], fov: 23 }}
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
       onCreated={({ gl }) => {
         gl.setClearColor(0x000000, 0);
@@ -53,10 +53,10 @@ export default function HeroBackground3D() {
 
       <Suspense fallback={null}>
         {/* --- Phone group --- */}
-        <Float speed={0.9} rotationIntensity={0.12} floatIntensity={0.12}>
+        <Float speed={0.9} rotationIntensity={0.10} floatIntensity={0.10}>
           <group
-            // ✅ "hero-right" placement while still centered in composition
-            position={[0.82, -0.02, 0]}
+            // ✅ Better centered - not pinned to edge
+            position={[0.55, -0.03, 0]}
             rotation={[0.02, -0.38, 0.01]}
           >
             {/* Screen glow card behind phone (makes display feel lit) */}
@@ -82,12 +82,12 @@ export default function HeroBackground3D() {
             </mesh>
 
             {/* ✅ BIG phone */}
-            <IPhoneModel heroScale={5.25} />
+            <IPhoneModel heroScale={5.6} />
           </group>
         </Float>
 
         {/* Soft ground shadow (subtle, not obvious) */}
-        <mesh position={[0.78, -0.62, 0.1]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0.55, -0.62, 0.1]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.55, 48]} />
           <meshBasicMaterial color="#000000" transparent opacity={0.22} />
         </mesh>

@@ -102,6 +102,135 @@ export function usePhoneDemoTexture() {
       ctx.restore();
     }
 
+    function drawShimmerSweep(ctx, x, y, w, h, t, intensity = 0.22) {
+      ctx.save();
+      // Clip to card
+      ctx.beginPath();
+      roundRect(ctx, x, y, w, h, 70);
+      ctx.clip();
+      // Move a diagonal shimmer across
+      const speed = 0.6; // slower = more premium
+      const p = (t * speed) % 1;
+      const sweepX = x + (p * (w + 260)) - 260;
+      const g = ctx.createLinearGradient(sweepX, y, sweepX + 260, y + h);
+      g.addColorStop(0.0, "rgba(255,255,255,0)");
+      g.addColorStop(0.45, `rgba(255,255,255,${intensity})`);
+      g.addColorStop(0.55, `rgba(255,255,255,${intensity})`);
+      g.addColorStop(1.0, "rgba(255,255,255,0)");
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle = g;
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+    }
+
+    function drawTextFieldWithCaret(ctx, x, y, w, h, valueText, t, focused = true, progress = 1) {
+      // Field background
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.strokeStyle = focused ? "rgba(42,174,103,0.9)" : "rgba(255,255,255,0.12)";
+      ctx.lineWidth = focused ? 3 : 2;
+      roundRect(ctx, x, y, w, h, 40);
+      ctx.fill();
+      ctx.stroke();
+      // Focus glow
+      if (focused) {
+        ctx.shadowColor = "rgba(42,174,103,0.55)";
+        ctx.shadowBlur = 24;
+        ctx.strokeStyle = "rgba(42,174,103,0.35)";
+        roundRect(ctx, x - 1, y - 1, w + 2, h + 2, 42);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+      // Text
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
+      ctx.font = "900 56px Inter, system-ui";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(valueText, x + 42, y + h / 2);
+      // Caret blink (only when focused)
+      if (focused) {
+        const blink = Math.floor(t * 2) % 2 === 0; // 2Hz blink
+        if (blink) {
+          // crude text width measure for caret placement
+          const tw = ctx.measureText(valueText).width;
+          const caretX = x + 42 + tw + 8;
+          ctx.strokeStyle = "rgba(239,255,246,0.95)";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(caretX, y + 18);
+          ctx.lineTo(caretX, y + h - 18);
+          ctx.stroke();
+        }
+      }
+      // Subtle "typing" highlight sweep when editing
+      if (focused) {
+        const glowP = Math.min(1, Math.max(0, progress));
+        ctx.globalCompositeOperation = "screen";
+        ctx.fillStyle = `rgba(42,174,103,${0.08 + glowP * 0.06})`;
+        roundRect(ctx, x, y, w, h, 40);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawMenuList(ctx, x, y, w, rowH, t, activeIndex = 0) {
+      // Subtle continuous scroll illusion
+      // Speed is tiny: looks alive without being distracting.
+      const scrollSpeed = 22; // px/sec
+      const offset = (t * scrollSpeed) % rowH;
+      const items = [
+        { name: "Margherita Pizza", price: "$16.99" },
+        { name: "Truffle Fries", price: "$9.50" },
+        { name: "Caesar Salad", price: "$11.00" },
+        { name: "Spicy Rigatoni", price: "$18.75" },
+        { name: "Tiramisu", price: "$8.00" },
+      ];
+      // container
+      ctx.save();
+      roundRect(ctx, x, y, w, rowH * 3.2, 60);
+      ctx.clip();
+      // draw 4 rows (enough to loop)
+      for (let i = -1; i < 6; i++) {
+        const idx = (i + items.length) % items.length;
+        const yy = y + i * rowH - offset;
+        const isActive = idx === activeIndex;
+        const bg = isActive ? "rgba(42,174,103,0.10)" : "rgba(255,255,255,0.04)";
+        const stroke = isActive ? "rgba(42,174,103,0.25)" : "rgba(255,255,255,0.06)";
+        // row card
+        ctx.fillStyle = bg;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, yy, w, rowH - 18, 46);
+        ctx.fill();
+        ctx.stroke();
+        // name
+        ctx.fillStyle = "rgba(255,255,255,0.88)";
+        ctx.font = "800 44px Inter, system-ui";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(items[idx].name, x + 44, yy + (rowH - 18) / 2);
+        // price
+        ctx.textAlign = "right";
+        ctx.fillStyle = isActive ? "#2AAE67" : "rgba(255,255,255,0.55)";
+        ctx.font = "900 44px Inter, system-ui";
+        ctx.fillText(items[idx].price, x + w - 44, yy + (rowH - 18) / 2);
+        ctx.textAlign = "left";
+      }
+      // top/bottom fade masks (premium)
+      const fadeH = 80;
+      const topFade = ctx.createLinearGradient(0, y, 0, y + fadeH);
+      topFade.addColorStop(0, "rgba(0,0,0,0.55)");
+      topFade.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = topFade;
+      ctx.fillRect(x, y, w, fadeH);
+      const botFade = ctx.createLinearGradient(0, y + rowH * 3.2 - fadeH, 0, y + rowH * 3.2);
+      botFade.addColorStop(0, "rgba(0,0,0,0)");
+      botFade.addColorStop(1, "rgba(0,0,0,0.65)");
+      ctx.fillStyle = botFade;
+      ctx.fillRect(x, y + rowH * 3.2 - fadeH, w, fadeH);
+      ctx.restore();
+    }
+
     const draw = (now) => {
       const ctx = ctxRef.current;
       if (!ctx) return;
@@ -249,6 +378,11 @@ export function usePhoneDemoTexture() {
       ctx.fill();
       ctx.restore();
 
+      // Shimmer sweep on hero card (premium feel)
+      if (step === "menu" || step === "live") {
+        drawShimmerSweep(ctx, cardX, cardY, cardW, cardH, t, 0.18);
+      }
+
       // dish title
       ctx.fillStyle = "rgba(255,255,255,0.95)";
       ctx.font = "900 62px Inter, system-ui";
@@ -280,6 +414,18 @@ export function usePhoneDemoTexture() {
       if (step === "live") btnLabel = "Updated ✓";
       ctx.fillText(btnLabel, W / 2, btnY + 95);
 
+      // Mini menu list section (alive + real)
+      const listY = btnY + 220;
+      const listH = Math.round(H * 0.28);
+      glassCard(ctx, cardX, listY, cardW, listH, 70, "rgba(255,255,255,0.055)", "rgba(255,255,255,0.08)");
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.font = "800 42px Inter, system-ui";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText("Today's menu", cardX + 52, listY + 78);
+      // Scroll list rows
+      drawMenuList(ctx, cardX + 28, listY + 110, cardW - 56, 130, t, 0);
+
       // Edit / Sync overlays (looks like a real sheet)
       if (step === "edit" || step === "sync") {
         const sheetH = Math.round(H * 0.30);
@@ -292,31 +438,26 @@ export function usePhoneDemoTexture() {
         ctx.fillText(step === "edit" ? "Update price" : "Publishing update", padX + 60, sheetY + 95);
 
         if (step === "edit") {
-          // slider
-          const trackX = padX + 60;
-          const trackY = sheetY + 150;
-          const trackW = W - padX * 2 - 120;
-          const trackH = 34;
-          ctx.fillStyle = "rgba(255,255,255,0.20)";
-          roundRect(ctx, trackX, trackY, trackW, trackH, 20);
-          ctx.fill();
-          const p = clamp(0.15 + local * 0.75, 0, 1);
-          ctx.fillStyle = "#1E7A4A";
-          roundRect(ctx, trackX, trackY, trackW * p, trackH, 20);
-          ctx.fill();
-          // knob
-          ctx.beginPath();
-          ctx.arc(trackX + trackW * p, trackY + trackH / 2, 30, 0, Math.PI * 2);
-          ctx.fillStyle = "#EFFFF6";
-          ctx.fill();
-          // price preview
-          ctx.fillStyle = "rgba(255,255,255,0.65)";
-          ctx.font = "700 44px Inter, system-ui";
-          ctx.fillText("New price", trackX, trackY + 110);
+          // Real price input field with focus ring + caret
+          const fieldX = padX + 60;
+          const fieldY = sheetY + 150;
+          const fieldW = W - padX * 2 - 120;
+          const fieldH = 120;
+          // Animate typed value (looks like input)
+          const from = "$16.99";
+          const to = "$14.99";
+          const typed = local < 0.5 ? from : to; // quick snap reads better in hero
+          drawTextFieldWithCaret(ctx, fieldX, fieldY, fieldW, fieldH, typed, t, true, local);
+          // Helper text
+          ctx.fillStyle = "rgba(255,255,255,0.55)";
+          ctx.font = "700 38px Inter, system-ui";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "alphabetic";
+          ctx.fillText("Price", fieldX, fieldY + fieldH + 70);
           ctx.textAlign = "right";
-          ctx.fillStyle = "#2AAE67";
-          ctx.font = "900 54px Inter, system-ui";
-          ctx.fillText("$14.99", trackX + trackW, trackY + 110);
+          ctx.fillStyle = "rgba(42,174,103,0.95)";
+          ctx.font = "900 42px Inter, system-ui";
+          ctx.fillText("Tap publish", fieldX + fieldW, fieldY + fieldH + 70);
           ctx.textAlign = "left";
         }
 
